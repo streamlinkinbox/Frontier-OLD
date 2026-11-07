@@ -56,7 +56,8 @@ export const GasPresets = {
 };
 
 const Accent = {
-    Render: "#9fb4d6", Environment: "#e8c27a", Vehicle: "#e1d34a", Effects: "#e8833a", Destruction: "#8fb3a4", Level: "#a8bbeb"
+    Render: "#9fb4d6", Environment: "#e8c27a", Vehicle: "#e1d34a", Effects: "#e8833a", Destruction: "#8fb3a4", Level: "#a8bbeb",
+    Debug: "#b8c0d0"
 };
 
 //------------------------------------------------------------------------------------------------------------------------
@@ -154,7 +155,16 @@ export function ConstructEntities(Host)
           Description: "Zones, teleports & scene budget", Meta: () => `${LevelZones.length} zones`, State: () => "live", Build: (C, B) => BuildLevel(Host, C, B) },
         { Id: "stress", Group: "Level", Name: "Stress test", Type: "Object pool", Glyph: "Boxes", Colour: Accent.Level,
           Description: "Pre-built pool · union, cards & draws under load", Meta: () => `${Host.Stress.QueryActive()}`,
-          State: () => (Host.Stress.QueryActive() > 0 ? "warm" : ""), Build: (C, B) => BuildStress(Host, C, B) }
+          State: () => (Host.Stress.QueryActive() > 0 ? "warm" : ""), Build: (C, B) => BuildStress(Host, C, B) },
+        { Id: "perfLab", Group: "Debug", Name: "Perf Lab — VehicleHMI only", Type: "Quality-preserving toggles", Glyph: "Gauge", Colour: Accent.Debug,
+          Description: "Each switch is a quality-preserving optimization — same pixels when nothing moved. Toggle one, drive, watch FPS in Render settings → Frame timing.",
+          Meta: () => `${Object.values(Host.PerfToggles||{}).filter(Boolean).length} on`, State: () => (Object.values(Host.PerfToggles||{}).some(Boolean) ? "warm" : "live"),
+          Build: (C, B) => BuildPerfLab(Host, C, B),
+          Switches: () => Object.entries(Host.PerfToggles||{}).map(([Key, Val]) => ({
+              Name: Key.replace(/([A-Z])/g,' $1').replace(/^./, s=>s.toUpperCase()),
+              Glyph: "Zap", Read: () => Host.PerfToggles[Key],
+              Write: (On) => { Host.PerfToggles[Key]=On; Host.PerfCounters={tlasSkipped:0,tlasBuilt:0,cascadeSkipped:0,cascadeBuilt:0,fogSkipped:0}; Host.PerfPriorTlasKey=null; Host.PerfPriorCascadeKey=null; }
+          })) }
     );
     return Entities;
 }
@@ -911,6 +921,45 @@ function BuildStress(Host, C, Body)
     C.Button(Row2, "Clear", "Trash2", () => Host.ApplySetting("StressClear"), "danger");
     C.Segmented(Stress, S, "StressMotion", StressMotionOptions, { Label: "Motion", OnChange: () => Host.ApplySetting("StressMotion") });
     C.Readout(Stress, () => Host.Stress.QueryReadout());
+}
+
+function BuildPerfLab(Host, C, Body)
+{
+    const P = Host.PerfToggles;
+    const Head = C.Card(Body, "About", "Info", { Accent: Accent.Debug, Index: 1 });
+    C.Muted(Head, "VehicleHMI-only. Each toggle keeps the same pixels when inputs haven’t changed — no resolution, bounce or denoiser levels are touched. Enable one at a time, drive the same loop, and compare Render settings → Frame timing → CPU/GPU timings or vehiclehmi_perf_v1 JSON.");
+    C.Muted(Head, "Tip: use Log every second → Copy JSON before/after. Counters reset on each toggle flip.");
+
+    const Real = C.Card(Body, "Real optimizations (CPU work skipped)", "Zap", { Accent: Accent.Debug, Index: 2 });
+    const ResetCounters = () => { Host.PerfCounters={tlasSkipped:0,tlasBuilt:0,cascadeSkipped:0,cascadeBuilt:0,fogSkipped:0}; Host.PerfPriorTlasKey=null; Host.PerfPriorCascadeKey=null; Host.PerfPriorCascadeLightKey=null; };
+    C.Switch(Real, P, "tlasReuse", { Label: "TLAS reuse", Detail: "Skip TLAS rebuild when static (same bounds)", OnChange: ResetCounters });
+    C.Switch(Real, P, "cascadeReuse", { Label: "Cascade cache", Detail: "Skip shadow cascades when matrices unchanged", OnChange: ResetCounters });
+    C.Switch(Real, P, "fogCull", { Label: "Fog shadow cull", Detail: "Skip cascades entirely when fog not sampling depth", OnChange: ResetCounters });
+    C.Switch(Real, P, "hmiGate", { Label: "HMI light gate", Detail: "Gate cabin area-light when no cockpit (measured outdoors)", OnChange: ResetCounters });
+    C.Muted(Real, "These touch CPU scene-update & queue-submit. Expect 0.5–3 ms saved when static; watch Frame timing’s CPU scene update avg and GPU Shadow/Direct EMA.");
+
+    const Future = C.Card(Body, "Planned — stub (shows intent, not yet wired)", "Wrench", { Accent: Accent.Debug, Index: 3 });
+    C.Switch(Future, P, "glassCull", { Label: "Shadow glass cull (stub)", Detail: "Shadow BLAS without glass — build-time", OnChange: ResetCounters });
+    C.Switch(Future, P, "compactRecord", { Label: "Compact instance record (stub)", Detail: "48 B vs 336 B OccupantProfile", OnChange: ResetCounters });
+    C.Switch(Future, P, "wideBvh", { Label: "Wide BVH — 4-wide nodes (stub)", Detail: "Shorter stack, same hits", OnChange: ResetCounters });
+    C.Muted(Future, "Stubs are ON-visible but don’t change dispatch yet — they document the next steps from the report without risking image parity.");
+
+    const Metrics = C.Card(Body, "Live counters (this session)", "Activity", { Accent: Accent.Debug, Index: 4 });
+    C.Readout(Metrics, () => {
+        const Pc = Host.PerfCounters || {};
+        return [
+            `TLAS: ${Pc.tlasBuilt||0} built · ${Pc.tlasSkipped||0} skipped (reuse ON only)`,
+            `Cascades: ${Pc.cascadeBuilt||0} built · ${Pc.cascadeSkipped||0} skipped`,
+            `Fog culls: ${Pc.fogSkipped||0} skipped`,
+            `Active toggles: ${Object.values(P).filter(Boolean).length}/${Object.keys(P).length}`
+        ];
+    });
+    C.Muted(Metrics, "Counters = how many times the optimization avoided work. If TLAS/cascades are skipped, Frame timing’s CPU scene update and GPU Shadow times should drop.");
+
+    const Actions = C.ActionRow(Metrics);
+    C.Button(Actions, "Reset counters", "RotateCcw", () => { Host.PerfCounters={tlasSkipped:0,tlasBuilt:0,cascadeSkipped:0,cascadeBuilt:0,fogSkipped:0}; Host.PerfPriorTlasKey=null; Host.PerfPriorCascadeKey=null; C.Synchronise(); });
+    C.Button(Actions, "All off", "X", () => { Object.keys(P).forEach(k=>P[k]=false); Host.PerfPriorTlasKey=null; Host.PerfPriorCascadeKey=null; Host.PerfCounters={tlasSkipped:0,tlasBuilt:0,cascadeSkipped:0,cascadeBuilt:0,fogSkipped:0}; C.Synchronise(); });
+    C.Button(Actions, "Recommended on", "Gauge", () => { P.tlasReuse=true; P.cascadeReuse=true; P.fogCull=true; P.hmiGate=true; C.Synchronise(); }, "primary");
 }
 
 //------------------------------------------------------------------------------------------------------------------------

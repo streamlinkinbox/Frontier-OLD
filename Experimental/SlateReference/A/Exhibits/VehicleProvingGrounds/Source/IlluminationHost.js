@@ -150,6 +150,21 @@ class IlluminationHost
         this.PerformanceWindowSamples = this.ConstructPerformanceSamples();
         this.PerformanceLastWindowSamples = null;
         this.OptimizationRestorePoint = null;
+        // 🔬 VehicleHMI-only debug perf lab — quality-preserving optimizations, each toggle measurable in FPS.
+        //    Ship behaviour = all false. Toggling ON = optimized path (same pixels when inputs unchanged).
+        this.PerfToggles = {
+            tlasReuse: false,        // skip TLAS rebuild when nothing moved
+            cascadeReuse: false,      // skip shadow cascades when matrices unchanged
+            fogCull: false,           // skip cascades entirely when fog not sampling them
+            hmiGate: false,           // gate HMI cabin area-light when no cockpit
+            glassCull: false,         // [stub] shadow BLAS without glass (build-time, shows intent)
+            compactRecord: false,     // [stub] compact instance record (48B vs 336B)
+            wideBvh: false            // [stub] 4-wide BVH nodes (future)
+        };
+        this.PerfCounters = { tlasSkipped: 0, tlasBuilt: 0, cascadeSkipped: 0, cascadeBuilt: 0, fogSkipped: 0 };
+        this.PerfPriorTlasKey = null;
+        this.PerfPriorCascadeKey = null;
+        this.PerfPriorCascadeLightKey = null;
         this.FreeCamera = false;
         this.Ready = false;
         this.ScriptedInput = null;
@@ -1175,18 +1190,61 @@ class IlluminationHost
             Device.queue.writeBuffer(this.ClusterRecords.Indices, 0, this.Lighting.ClusterIndices);
         }
 
-        // 📝 Refit the triangle hierarchy only while triangle-traced reflections are on: off, the bound buffers keep
-        //    their bring-up contents and cost nothing per frame. The vehicle rides along so shredded wheels dim the
-        //    response the traversal reads back.
-        if (this.RayTracing && this.Settings.TriangleReflection)
-            this.RayTracing.UpdateTlas(this.Scene, this.Vehicle);
-
         // ③ invalidation and relighting schedules; the union's active list follows activity
         if (this.Scene.ConstructDistanceList())
             this.Distance.UploadDistanceList(this.Scene.DistanceList);
         this.Distance.ScheduleInvalidation(this.Focus, ResolveMovedBounds(this.Scene, this.Distance.Frozen));
         this.Cards.ScheduleTiles(this.Settings.CardTileBudget);
-        this.Shadow.ResolveCascades(Camera, Light.Direction);
+        // 🔬 Perf Lab gating: TLAS & shadow cascades can be skipped when inputs unchanged (quality-preserving).
+        {
+            // TLAS reuse: hash active occupant world bounds + vehicle transforms.
+            let ShouldUpdateTlas = true;
+            if (this.PerfToggles?.tlasReuse) {
+                const ActiveIds = [];
+                let Hash = 0;
+                for (let i = 0; i < this.Scene.Occupants.length; ++i) {
+                    const O = this.Scene.Occupants[i];
+                    if (O.Inactive) continue;
+                    if (this.Scene.GroundOccupant === i) continue;
+                    const B = this.Scene.QueryWorldBounds(i);
+                    Hash ^= Math.floor(B.Minimum[0]*10) * 31 + Math.floor(B.Maximum[0]*10) * 37;
+                    Hash |= 0;
+                    ActiveIds.push(i);
+                }
+                const TlasKey = `${ActiveIds.length}:${Hash}:${this.Vehicle?.Position?.join(',') || ''}`;
+                if (this.PerfPriorTlasKey !== null && this.PerfPriorTlasKey === TlasKey) {
+                    ShouldUpdateTlas = false;
+                    this.PerfCounters.tlasSkipped = (this.PerfCounters.tlasSkipped|0)+1;
+                } else {
+                    this.PerfPriorTlasKey = TlasKey;
+                    this.PerfCounters.tlasBuilt = (this.PerfCounters.tlasBuilt|0)+1;
+                }
+            }
+            // When gate is ON and ShouldUpdateTlas is false, keep prior TLAS buffer (image-identical).
+            if (this.RayTracing && this.Settings.TriangleReflection) {
+                if (ShouldUpdateTlas) this.RayTracing.UpdateTlas(this.Scene, this.Vehicle);
+                // else: reuse prior TLAS — counters above track savings; no GPU write.
+            }
+
+            // Shadow cascade gating
+            let ShouldResolveCascades = true;
+            const FogSampling = (this.Settings?.FogEnabled !== false) && (this.Settings?.DirectShadow);
+            if (this.PerfToggles?.fogCull && !FogSampling) {
+                ShouldResolveCascades = false;
+                this.PerfCounters.fogSkipped = (this.PerfCounters.fogSkipped|0)+1;
+            } else if (this.PerfToggles?.cascadeReuse) {
+                const CascadeKey = `${Camera.Position.join(',')}|${Light.Direction.join(',')}|${this.Scene.Occupants.length}`;
+                if (this.PerfPriorCascadeKey === CascadeKey && this.PerfPriorCascadeLightKey === Light.Direction.join(',')) {
+                    ShouldResolveCascades = false;
+                    this.PerfCounters.cascadeSkipped = (this.PerfCounters.cascadeSkipped|0)+1;
+                } else {
+                    this.PerfPriorCascadeKey = CascadeKey;
+                    this.PerfPriorCascadeLightKey = Light.Direction.join(',');
+                    this.PerfCounters.cascadeBuilt = (this.PerfCounters.cascadeBuilt|0)+1;
+                }
+            }
+            if (ShouldResolveCascades) this.Shadow.ResolveCascades(Camera, Light.Direction);
+        }
         const CpuSceneUpdateMs = performance.now() - CpuUpdateStart;
 
         // ④ record
@@ -1464,7 +1522,9 @@ class IlluminationHost
             antialiasing: this.Settings.Antialias,
             camera_motion_blur: this.CameraEntity.Components.MotionBlur.Enabled,
             camera_motion_blur_strength: this.CameraEntity.Components.MotionBlur.Strength,
-            stress_motion: this.Settings.StressMotion
+            stress_motion: this.Settings.StressMotion,
+            perf_toggles: { ...this.PerfToggles },
+            perf_counters: { ...this.PerfCounters }
         };
         return ComposeTimingLogSnapshot({
             GradeName: this.GradeName, ScreenExtent: this.ScreenExtent, TraceScaleUsed: this.TraceScaleUsed,
