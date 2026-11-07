@@ -1,0 +1,305 @@
+/*============================================================================================================================================
+                                                       INSPECTOR / OUTLINER REFERENCE PASS
+============================================================================================================================================
+The Sun inspector capture supplies the warm charcoal cards, generous spacing and pale sand controls; the Studio Outliner
+capture supplies the near-black workspace, softly outlined filter pills and restrained green state accents. This file is
+loaded after FrontierEditor.css so the exhibit can keep its existing layout while using those visual references.
+============================================================================================================================================*/
+
+:root
+{
+    --ground: #11120f;
+    --column: #171813;
+    --edge: #292a22;
+    --text: #e1dfd3;
+    --soft: #b9b5a4;
+    --muted: #969181;
+    --faint: #716e61;
+    --accent: #e2d7ad;
+    --on: #58c990;
+    --warn: #d7ae68;
+    --fail: #d87773;
+}
+
+html, body { background: var(--ground); color: var(--text); }
+.column { background: var(--column); }
+.column-tabs { background: #11120f; border-color: #272820; }
+.column-tab { background: #171813; border-color: #272820; color: #c7c2b0; }
+#outliner { border-color: #292a22; }
+.outliner-body { padding: 22px 16px 16px; }
+.brand .brand-symbol, .brand .brand-dot { color: #d6cda9; }
+.scene-label, .brand .version { color: #8a8675; }
+.scene-title { color: #e3e0d4; }
+.status-dot { box-shadow: 0 0 7px #58c99055; }
+
+.count-tiles { gap: 10px; padding: 0 2px 18px; }
+.count-tile
+{
+    height: 72px;
+    padding: 11px 12px;
+    border-radius: 16px;
+    background: #22231d;
+    border: 1px solid #2e2f26;
+}
+.count-tile .count-icon { background: #5fc990; color: #183324; }
+.count-tile.hidden-count .count-icon { background: #33342b; color: #999583; }
+.count-tile .count-caption { color: #a09b88; }
+.count-tile .count-value { color: #e6e2d4; }
+
+.search
+{
+    height: 36px;
+    border-radius: 19px;
+    background: #1d1f19;
+    border-color: #303127;
+    padding-inline: 13px;
+    margin-bottom: 16px;
+}
+.search:focus-within { border-color: #77745f; box-shadow: 0 0 0 2px #e2d7ad12; }
+.search input { color: #dedacb; }
+.group-label { color: #a19b87; padding-bottom: 9px; }
+.group-count { color: #716f60; }
+.tree-row { height: 40px; margin: 2px 1px; border-radius: 11px; }
+.tree-row:hover { background: #20221b; }
+.tree-row.selected
+{
+    background: linear-gradient(110deg, #2a2c23, #24251e);
+    border-color: #3a3b30;
+    box-shadow: inset 0 1px #ffffff08;
+}
+.object-button { color: #b4b09f; }
+.selected .object-button { color: #f0eddf; }
+.object-button .row-meta { color: #858171; }
+.outliner-heading h2 span
+{
+    color: #bcb69e;
+    border-color: #3a3b30;
+    background: #20211b;
+    border-radius: 10px;
+    padding: 3px 7px;
+}
+.outliner-bottom { border-color: #292a22; }
+.world-icon { background: #24251f; color: #c5bea6; border-radius: 11px; }
+.outliner-bottom strong { color: #d5d1c3; }
+.outliner-bottom div > span { color: #928e7d; }
+
+#viewport-column { background: #0c0d0a; }
+.viewport-bar { background: #171813; border-color: #292a22; }
+.viewport-bar .scene-heading strong { color: #e1ded1; }
+.viewport-bar .scene-heading span { color: #8f8a78; }
+.icon-button
+{
+    background: #20211b;
+    border-color: #33342a;
+    color: #bdb8a5;
+}
+.icon-button:hover, .icon-button.active
+{
+    background: #2b2d24;
+    border-color: #555544;
+    color: #f0ead3;
+}
+.icon-button.active { color: var(--on); }
+
+#inspector
+{
+    border-color: #2b2c23;
+    background: radial-gradient(ellipse at 82% 0%, #202119 0%, #181914 43%, #151611 100%);
+}
+.inspector-top { border-color: #2b2c23; }
+.inspector-top .crumbs { color: #d4cfbd; }
+.inspector-top .crumbs span, .inspector-top .crumbs .glyph { color: #918b79; }
+.inspector-content { padding: 20px 18px 22px; }
+.object-header { margin-bottom: 20px; }
+.object-header h1 { color: #e9e6d9; font-size: 21px; }
+.eyebrow { color: #9b957f; }
+
+.cards { gap: 12px; }
+.card
+{
+    padding: 18px 18px 17px;
+    border-radius: 20px;
+    background: linear-gradient(130deg, #24251f 0%, #20211b 100%);
+    border: 1px solid #303127;
+    box-shadow: 0 5px 16px #0000000b;
+}
+.card-heading { margin-bottom: 15px; color: #ddd9ca; }
+.card-heading .glyph { color: #d7cda6; }
+.card-heading .card-index { color: #777362; }
+.card-subtitle { color: #99937e; }
+.metric { color: #e7e3d6; }
+.metric small { color: #a29c88; }
+.muted { color: #aaa48f; line-height: 1.6; }
+.section-label > span:first-child { color: #a7a08a; }
+.section-label > span:last-child { color: #85806f; }
+
+.property-switches { gap: 9px; margin-bottom: 17px; }
+.property-switch
+{
+    min-height: 104px;
+    padding: 13px 7px 11px;
+    gap: 8px;
+    background: #24251f;
+    border: 1px solid #34352a;
+    border-radius: 18px;
+}
+.property-switch:hover { background: #2a2b24; border-color: #4a4a3b; }
+.property-switch .switch-icon
+{
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #64c987;
+    color: #193623;
+    box-shadow: none;
+}
+.property-switch .switch-name { color: #d4d0c1; }
+.property-switch .switch-state { color: #73d69c; }
+.property-switch.is-off { border-color: #493430; background: #25231f; }
+.property-switch.is-off .switch-icon { background: #d27673; color: #3b201e; }
+.property-switch.is-off .switch-state { color: #d28a80; }
+
+.control { margin-top: 15px; }
+.control-line { color: #aaa48f; margin-bottom: 8px; }
+.number-field
+{
+    background: #1a1b16;
+    border-color: #34352a;
+    border-radius: 10px;
+    color: #e3dfd0;
+}
+input[type=range]
+{
+    background: linear-gradient(to right, #e2d7ad 0 var(--progress), #3a3b32 var(--progress) 100%);
+    height: 4px;
+}
+input[type=range]::-webkit-slider-thumb
+{
+    width: 14px;
+    height: 14px;
+    background: #e5d9af;
+    border: 3px solid #282920;
+    box-shadow: 0 0 0 1px #bfb68f;
+}
+input[type=range]::-moz-range-thumb
+{
+    width: 10px;
+    height: 10px;
+    background: #e5d9af;
+    border: 2px solid #282920;
+    box-shadow: 0 0 0 1px #bfb68f;
+}
+.range-labels { color: #97917d; }
+
+.switch-row
+{
+    padding: 10px 0;
+    color: #d1cdbc;
+    border-color: #ffffff0b;
+}
+.switch-row small { color: #99937f; }
+.toggle
+{
+    width: 36px;
+    height: 20px;
+    border-radius: 20px;
+    background: #3c3d33;
+    border-color: #4b4c3f;
+}
+.toggle::after
+{
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    background: #aaa692;
+}
+.toggle.on { background: #5fc990; border-color: #70d49a; }
+.toggle.on::after { transform: translateX(16px); background: #f5f1e5; }
+
+.segmented
+{
+    gap: 5px;
+    padding: 4px;
+    background: #191a15;
+    border-color: #303127;
+    border-radius: 18px;
+}
+.segmented button
+{
+    min-height: 32px;
+    padding: 7px 9px;
+    border-radius: 16px;
+    color: #a9a48f;
+}
+.segmented button:hover { color: #ece7d8; }
+.segmented button.active
+{
+    background: #34352b;
+    color: #e7dfbf;
+    box-shadow: inset 0 1px #ffffff0a;
+}
+.select-field
+{
+    background: #1b1c17;
+    border-color: #37382d;
+    border-radius: 12px;
+    color: #d9d4c2;
+    padding: 10px 12px;
+}
+
+.action-row { gap: 8px; margin-top: 15px; }
+.action-button
+{
+    min-height: 36px;
+    padding: 9px 11px;
+    border-radius: 14px;
+    border-color: #3a3b30;
+    background: #2a2b24;
+    color: #d9d5c6;
+}
+.action-button:hover { border-color: #5b5b47; background: #34352b; }
+.action-button.primary
+{
+    background: #e1d7b1;
+    border-color: #e1d7b1;
+    color: #28281f;
+}
+.action-button.primary:hover { background: #eee4bd; }
+.action-button.danger { color: #e0a09a; border-color: #5a3c38; }
+.link-button { background: #24251f; border-color: #3a3b30; border-radius: 15px; color: #e1dccb; }
+.small-pill { background: #2b2c24; border-color: #404134; color: #c9c3ae; }
+.small-pill.live { background: #1e3025; border-color: #315a41; color: #86d6a5; }
+.small-pill.warm { background: #332b1d; border-color: #5c4e2e; color: #dfbe7d; }
+.stats { border-color: #ffffff0d; gap: 11px; }
+.readout
+{
+    background: #191a15;
+    border-color: #303127;
+    border-radius: 13px;
+    color: #c5c0ae;
+}
+
+/* Toolbar and popover-like quick controls use the same rounded, softly outlined language as the reference filters. */
+.viewport-tabs .scene-pill, .live-pill, .enabled-pill, .small-pill
+{
+    border-radius: 999px;
+}
+.live-pill
+{
+    color: #d7c990;
+    border-color: #514b32;
+    background: #29271d;
+}
+.enabled-pill { background: #25261f; border-color: #393a30; color: #d3cebd; }
+.instrument { background: #1b1c16; border-color: #34352a; border-radius: 16px; }
+#status { background: #11120f; border-color: #292a22; color: #aaa590; }
+#status .status-item span { color: #817c69; }
+#status .status-item strong { color: #ddd8c8; }
+.outliner-body::-webkit-scrollbar-thumb, .inspector-content::-webkit-scrollbar-thumb { background: #3a3b30; }
+
+@media (max-width: 1180px)
+{
+    .inspector-content { padding-inline: 14px; }
+    .card { padding: 16px 15px; }
+}

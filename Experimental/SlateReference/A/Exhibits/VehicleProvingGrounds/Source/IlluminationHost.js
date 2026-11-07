@@ -28,6 +28,7 @@ import { VarianceIntegrator } from "./VarianceIntegrator.js";
 import { DisplayProjection } from "./DisplayProjection.js";
 import { HardwareMetrics } from "./HardwareMetrics.js";
 import { ComposeTimingLog as ComposeTimingLogSnapshot } from "./TimingLog.js";
+import { CameraMotionBlur } from "./CameraMotionBlur.js";
 import { EditorShell } from "./EditorShell.js";
 import { LightingPresets } from "./InspectorPages.js";
 import { OverlayDock, OverlayKeys } from "./OverlayDock.js";
@@ -140,6 +141,15 @@ class IlluminationHost
         this.FrameDurationCursor = 0;
         this.Keys = new Set();
         this.FrameIndex = 0;
+        this.CameraEntity = {
+            Name: "Vehicle Proving Grounds camera",
+            Components: { MotionBlur: new CameraMotionBlur() }
+        };
+        this.PerformanceCapture = { Enabled: Query.get("perfLog") === "1" };
+        this.PerformanceWindowSeconds = 0.0;
+        this.PerformanceWindowSamples = this.ConstructPerformanceSamples();
+        this.PerformanceLastWindowSamples = null;
+        this.OptimizationRestorePoint = null;
         this.FreeCamera = false;
         this.Ready = false;
         this.ScriptedInput = null;
@@ -1030,6 +1040,9 @@ class IlluminationHost
             Features |= TemporalRestartBit;
         }
         if (this.Smoke.Resident && this.Settings.SmokeEnabled && !this.Omitted.has("Smoke")) Features |= 4096;
+        // 📝 The camera component's 8-bit strength occupies reserved feature bits 16–23; the rest of the frame record stays ABI-stable.
+        if (this.Settings.Inspection === 0)
+            Features |= Math.round(this.CameraEntity.Components.MotionBlur.ResolveStrength() * 255.0) << 16;
         Integers[103] = Features;
         Integers[104] = this.Settings.Inspection;
         Scalars[105] = this.Settings.TemporalTallyLimit;
@@ -1064,16 +1077,19 @@ class IlluminationHost
             requestAnimationFrame((Next) => this.AdvanceFrame(Next));
             return;
         }
+        const CpuFrameStart = performance.now();
+        const FrameDeltaMs = Math.max(0.0, Now - (this.PriorFrameTime || Now));
         const Δτ = Math.min(0.1, Math.max(0.0, (Now - this.LastTime) * 0.001));
         this.LastTime = Now;
         const Hud = document.getElementById("hud");
         if (Hud?.style) Object.assign(Hud.style, ResolveHudStyle(this.Settings));
         this.FrameSeconds = (this.FrameSeconds || Δτ) * 0.9 + Δτ * 0.1;
-        this.FrameDurations[this.FrameDurationCursor] = (Now - (this.PriorFrameTime || Now)) || 0.0;
+        this.FrameDurations[this.FrameDurationCursor] = FrameDeltaMs;
         this.FrameDurationCursor = (this.FrameDurationCursor + 1) % this.FrameDurations.length;
         this.PriorFrameTime = Now;
         const Device = this.Exchange.Device;
         const Parity = this.FrameIndex & 1;
+        const CpuUpdateStart = performance.now();
 
         // ① drive: keyboard (or a scripted command) through the input ramps into the vehicle solver
         const Keys = this.FreeCamera ? new Set(["Space"]) : this.Keys;
@@ -1171,8 +1187,10 @@ class IlluminationHost
         this.Distance.ScheduleInvalidation(this.Focus, ResolveMovedBounds(this.Scene, this.Distance.Frozen));
         this.Cards.ScheduleTiles(this.Settings.CardTileBudget);
         this.Shadow.ResolveCascades(Camera, Light.Direction);
+        const CpuSceneUpdateMs = performance.now() - CpuUpdateStart;
 
         // ④ record
+        const CpuCommandStart = performance.now();
         const Encoder = Device.createCommandEncoder({ label: `Frame ${this.FrameIndex}` });
         const Included = (Name) => !this.Omitted.has(Name);
         this.Atmosphere.RecordSkyView(Encoder, this.Settings.SolarIlluminance);
@@ -1238,7 +1256,11 @@ class IlluminationHost
             }
         }
         const Timed = this.Metrics.RecordResolve(Encoder);
-        Device.queue.submit([Encoder.finish()]);
+        const CommandBuffer = Encoder.finish();
+        const CpuCommandEncodeMs = performance.now() - CpuCommandStart;
+        const CpuSubmitStart = performance.now();
+        Device.queue.submit([CommandBuffer]);
+        const CpuQueueSubmitMs = performance.now() - CpuSubmitStart;
         this.FramesInFlight = (this.FramesInFlight || 0) + 1;
         Device.queue.onSubmittedWorkDone().then(() => { this.FramesInFlight--; });
         if (Timed)
@@ -1248,6 +1270,8 @@ class IlluminationHost
         this.PriorValid = true;
 
         this.PresentMeasurements(Now, Light);
+        const CpuCallbackMs = performance.now() - CpuFrameStart;
+        this.RecordPerformanceSample(FrameDeltaMs, FrameDeltaMs * 0.001, CpuCallbackMs, CpuSceneUpdateMs, CpuCommandEncodeMs, CpuQueueSubmitMs);
         this.FrameIndex++;
         requestAnimationFrame((Next) => this.AdvanceFrame(Next));
     }
@@ -1338,34 +1362,156 @@ class IlluminationHost
                 `tiles: ${this.Cards.DynamicTiles.length} moving (every frame) + ${this.Cards.StaticTiles.length} static`];
     }
 
-    // 📝 The timing log (TimingLog.js formats it): the host hands a snapshot of everything cost-relevant.
-    ComposeTimingLog()
+    ConstructPerformanceSamples()
     {
+        return { frame_delta_ms: [], callback_cpu_ms: [], scene_update_cpu_ms: [], command_encode_cpu_ms: [], queue_submit_cpu_ms: [] };
+    }
+
+    RecordPerformanceSample(FrameDeltaMs, DeltaSeconds, CallbackCpuMs, SceneUpdateCpuMs, CommandEncodeCpuMs, QueueSubmitCpuMs)
+    {
+        const Samples = this.PerformanceWindowSamples;
+        Samples.frame_delta_ms.push(FrameDeltaMs);
+        Samples.callback_cpu_ms.push(CallbackCpuMs);
+        Samples.scene_update_cpu_ms.push(SceneUpdateCpuMs);
+        Samples.command_encode_cpu_ms.push(CommandEncodeCpuMs);
+        Samples.queue_submit_cpu_ms.push(QueueSubmitCpuMs);
+        // 📝 Keep manual captures bounded when automatic logging is off; normal one-second windows reset below.
+        for (const Values of Object.values(Samples))
+            if (Values.length > 512) Values.shift();
+        this.PerformanceWindowSeconds += DeltaSeconds;
+        if (!this.PerformanceCapture.Enabled || this.PerformanceWindowSeconds < 1.0)
+            return;
+        const WindowSeconds = this.PerformanceWindowSeconds;
+        const Log = this.ComposeTimingLog(Samples, WindowSeconds);
+        console.info(`vehiclehmi_perf_v1 ${JSON.stringify(JSON.parse(Log))}`);
+        this.PerformanceLastWindowSamples = Samples;
+        this.PerformanceWindowSamples = this.ConstructPerformanceSamples();
+        this.PerformanceWindowSeconds = 0.0;
+    }
+
+    SetPerformanceLogging(Enabled)
+    {
+        this.PerformanceCapture.Enabled = !!Enabled;
+        this.PerformanceWindowSeconds = 0.0;
+        this.PerformanceWindowSamples = this.ConstructPerformanceSamples();
+        this.Shell?.Announce(Enabled
+            ? "Performance logging on — vehiclehmi_perf_v1 records will appear in the console once per second."
+            : "Performance logging paused; copy or download the latest capture whenever you like.");
+    }
+
+    ApplyFastPerformanceProfile()
+    {
+        if (!this.OptimizationRestorePoint)
+        {
+            const Keys = ["Quality", "RenderScale", "TraceScale", "ScreenTraversal", "Reflection", "TriangleReflection", "CardRadiosity",
+                          "DirectShadow", "SmokeEnabled", "SpatialCount", "SpatialRadius", "CardTileBudget", "VarianceKernel", "Antialias"];
+            this.OptimizationRestorePoint = {
+                GradeName: this.GradeName,
+                Grade: { ...this.Grade },
+                Settings: Object.fromEntries(Keys.map((Key) => [Key, this.Settings[Key]]))
+            };
+        }
+        this.GradeName = "low";
+        this.Grade = { ...QualityGrades.low };
+        Object.assign(this.Settings, {
+            Quality: 0, RenderScale: QualityGrades.low.RenderScale, TraceScale: 4,
+            ScreenTraversal: true, Reflection: false, TriangleReflection: false, CardRadiosity: false,
+            DirectShadow: false, SmokeEnabled: false, SpatialCount: 2, SpatialRadius: 8,
+            CardTileBudget: QualityGrades.low.TileBudget
+        });
+        this.PriorValid = false;
+        this.ReconstructScreenTargets(true);
+        this.Shell?.Controls.Synchronise();
+        this.Shell?.Announce("Fast profile applied: low resolution, quarter-resolution tracing, reflections and smoke off. Previous settings are saved.");
+    }
+
+    RestorePerformanceProfile()
+    {
+        if (!this.OptimizationRestorePoint)
+        {
+            this.Shell?.Announce("No saved settings yet — apply the fast profile first.");
+            return;
+        }
+        this.GradeName = this.OptimizationRestorePoint.GradeName;
+        this.Grade = { ...this.OptimizationRestorePoint.Grade };
+        Object.assign(this.Settings, this.OptimizationRestorePoint.Settings);
+        this.OptimizationRestorePoint = null;
+        this.PriorValid = false;
+        this.ReconstructScreenTargets(true);
+        this.Shell?.Controls.Synchronise();
+        this.Shell?.Announce("Saved render settings restored.");
+    }
+
+    // 📝 The shareable v1 record keeps main-thread wall time separate from asynchronously resolved GPU pass timestamps.
+    ComposeTimingLog(CpuSamples = this.PerformanceLastWindowSamples || this.PerformanceWindowSamples,
+                     WindowSeconds = this.PerformanceWindowSeconds)
+    {
+        const Settings = {
+            quality_grade: this.GradeName,
+            render_scale: this.Grade.RenderScale,
+            trace_scale: this.Settings.TraceScale,
+            screen_traversal: this.Settings.ScreenTraversal,
+            indirect_lighting: this.Settings.Indirect,
+            temporal_reuse: this.Settings.TemporalReuse,
+            spatial_reuse: this.Settings.SpatialReuse,
+            visibility_reuse: this.Settings.VisibilityReuse,
+            reflections: this.Settings.Reflection,
+            triangle_reflections: this.Settings.TriangleReflection,
+            card_radiosity: this.Settings.CardRadiosity,
+            direct_shadows: this.Settings.DirectShadow,
+            smoke: this.Settings.SmokeEnabled,
+            denoiser: this.Settings.VarianceKernel,
+            antialiasing: this.Settings.Antialias,
+            camera_motion_blur: this.CameraEntity.Components.MotionBlur.Enabled,
+            camera_motion_blur_strength: this.CameraEntity.Components.MotionBlur.Strength,
+            stress_motion: this.Settings.StressMotion
+        };
         return ComposeTimingLogSnapshot({
             GradeName: this.GradeName, ScreenExtent: this.ScreenExtent, TraceScaleUsed: this.TraceScaleUsed,
-            TraceExtent: this.TraceExtent, FrameIndex: this.FrameIndex, Settings: this.Settings, FrameSeconds: this.FrameSeconds,
-            LowRate: this.LowRate, MetricsEnabled: this.Metrics.Enabled, PassNames: this.Metrics.PassNames,
-            Durations: this.Metrics.Durations, LightCount: this.Lighting ? this.Lighting.Lights.length : 0,
-            ClusterOverflow: this.Lighting ? this.Lighting.ClusterOverflow : 0
+            TraceExtent: this.TraceExtent, FrameIndex: this.FrameIndex, Settings, FrameSeconds: this.FrameSeconds,
+            LowRate: this.LowRate, MetricsEnabled: this.Metrics?.Enabled, PassNames: this.Metrics?.PassNames,
+            Durations: this.Metrics?.Durations, LastDurations: this.Metrics?.LastDurations, PassSamples: this.Metrics?.PassSamples,
+            CpuSamples, WindowSeconds, LightCount: this.Lighting ? this.Lighting.Lights.length : 0,
+            ClusterOverflow: this.Lighting ? this.Lighting.ClusterOverflow : 0,
+            ActiveStressObjects: this.Stress ? this.Stress.QueryActive() : 0,
+            MovingStressObjects: this.Stress?.Moving?.length || 0,
+            DrawRuns: this.Scene?.DrawRuns?.length || 0,
+            DistanceBricks: this.Distance?.FrameBricks?.length ? this.Distance.FrameBricks.length / 4 : 0,
+            CardTiles: this.Cards?.ScheduledTiles || 0,
+            AdapterInfo: this.Exchange?.QueryAdapterDescription() || null,
+            UserAgent: navigator.userAgent,
+            CaptureEnabled: this.Capture
         });
     }
 
-    // 📝 Copies the timing log to the clipboard; the console always gets it too, for when the clipboard is blocked.
+    // 📝 Clipboard and JSON download provide simple shareable captures; console output remains a fallback.
     async CopyTimingLog()
     {
         const Log = this.ComposeTimingLog();
-        console.log(Log);
+        console.info(`vehiclehmi_perf_v1 ${Log}`);
         try
         {
             if (!navigator.clipboard || !navigator.clipboard.writeText)
                 throw new Error("no clipboard");
             await navigator.clipboard.writeText(Log);
-            this.Shell.Announce("Timing log copied — paste it into the chat.");
+            this.Shell.Announce("JSON performance capture copied — share it here for analysis.");
         }
         catch (Failure)
         {
-            this.Shell.Announce("Clipboard blocked — the timing log is in the console (F12).");
+            this.Shell.Announce("Clipboard blocked — copy vehiclehmi_perf_v1 from the developer console (F12).");
         }
+    }
+
+    DownloadTimingLog()
+    {
+        const Blob_ = new Blob([this.ComposeTimingLog()], { type: "application/json" });
+        const Address = URL.createObjectURL(Blob_);
+        const Link = document.createElement("a");
+        Link.href = Address;
+        Link.download = `vehiclehmi-perf-${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
+        Link.click();
+        setTimeout(() => URL.revokeObjectURL(Address), 1000);
+        this.Shell.Announce("Performance JSON downloaded — attach it here for analysis.");
     }
 
     ReportFailure(Message, Fatal)

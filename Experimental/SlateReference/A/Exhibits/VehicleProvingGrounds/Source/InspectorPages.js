@@ -89,7 +89,16 @@ export function ConstructEntities(Host)
           State: () => (Host.Vehicle.Burnout ? "warm" : "live"), Build: (C, B) => BuildVehicle(Host, C, B),
           Switches: () => [Feature("Line lock", "Flame", S, "LineLock"), Feature("Thermal grip", "Thermometer", S, "ThermalGrip"),
                            Feature("Tyre marks", "CircleDot", S, "TyreMarks"),
-                           Feature("Sparks", "Zap", S, "Sparks")] },
+                           Feature("Sparks", "Zap", S, "Sparks"),
+                           { Name: "Motion blur", Glyph: "Camera", Read: () => Host.CameraEntity.Components.MotionBlur.Enabled,
+                             Write: (On) => { Host.CameraEntity.Components.MotionBlur.Enabled = On; Host.PriorValid = false; } }] },
+        { Id: "camera", Group: "Vehicle", Name: "Camera", Type: "Camera component host", Glyph: "Camera", Colour: Accent.Vehicle, Parent: "vehicle",
+          Description: "Camera rigs and attached post-process components",
+          Meta: () => `${S.CameraMode} · ${Host.CameraEntity.Components.MotionBlur.Enabled ? "blur on" : "blur off"}`,
+          State: () => Host.CameraEntity.Components.MotionBlur.Enabled ? "warm" : "live",
+          Build: (C, B) => BuildCamera(Host, C, B),
+          Switches: () => [{ Name: "Motion blur", Glyph: "Camera", Read: () => Host.CameraEntity.Components.MotionBlur.Enabled,
+                             Write: (On) => { Host.CameraEntity.Components.MotionBlur.Enabled = On; Host.PriorValid = false; } }] },
         { Id: "cabin", Group: "Vehicle", Name: "Cabin · HMI", Type: "Interior", Glyph: "Monitor", Colour: Accent.Vehicle, Parent: "vehicle",
           Description: "Tablet & cluster, mirrors, glass, interior cameras", Meta: () => S.CameraMode,
           State: () => (Host.Cabin && Host.Cabin.Screen ? "live" : "warm"), Build: (C, B) => BuildCabin(Host, C, B),
@@ -182,6 +191,9 @@ function BuildRender(Host, C, Body)
     C.Segmented(Quality, S, "Quality", [["Low", 0], ["Medium", 1], ["High", 2]], { Label: "Quality grade · reloads" });
     C.Segmented(Quality, S, "TraceScale", [["Full", 1], ["Half", 2], ["Quarter", 4]], { Label: "Trace resolution" });
     Slider(C, Quality, S, "RenderScale", "Render scale", 0.25, 2.0, 0.05, "×", 2, ["Faster", "Sharper"]);
+    const Profile = C.ActionRow(Quality);
+    C.Button(Profile, "Apply fast profile", "Gauge", () => Host.ApplyFastPerformanceProfile(), "primary");
+    C.Button(Profile, "Restore saved", "RotateCcw", () => Host.RestorePerformanceProfile());
 
     const Gather = C.Card(Body, "Global illumination · ReSTIR", "Sparkles", { Accent: Accent.Render, Index: 2 });
     C.Switch(Gather, S, "ScreenTraversal", { Label: "Screen traces, then distance field", Detail: "Nearest-depth pyramid walk first (?screentraces=1)" });
@@ -215,14 +227,30 @@ function BuildRender(Host, C, Body)
     C.Metric(Timing, () => 1.0 / Math.max(Host.FrameSeconds || 1, 1.0e-4), "fps", 0, () => [`1% low ${Host.LowRate || "–"}`, ""]);
     C.Stats(Timing, [["Frame", () => (Host.FrameSeconds || 0) * 1000.0, "ms", 1], ["Draw runs", () => Host.Scene.DrawRuns.length],
                      ["Bricks / frame", () => Host.Distance.FrameBricks.length / 4]]);
+    C.Muted(Timing, "CPU timings are main-thread wall time. GPU pass timings are separate asynchronous timestamp queries; unsupported adapters report unavailable, not zero.");
+    C.Switch(Timing, Host.PerformanceCapture, "Enabled", {
+        Label: "Log every second",
+        Detail: "vehiclehmi_perf_v1 JSON in the developer console",
+        OnChange: (Enabled) => Host.SetPerformanceLogging(Enabled)
+    });
     C.Readout(Timing, () =>
     {
+        const Samples = Host.PerformanceWindowSamples;
+        const Mean = (Values) => Values.length ? (Values.reduce((Total, Value) => Total + Value, 0.0) / Values.length).toFixed(2) : "–";
+        const Lines = [`CPU callback       ${Mean(Samples.callback_cpu_ms)} ms avg`,
+                       `CPU scene update   ${Mean(Samples.scene_update_cpu_ms)} ms avg`,
+                       `CPU command encode ${Mean(Samples.command_encode_cpu_ms)} ms avg`,
+                       `CPU queue submit   ${Mean(Samples.queue_submit_cpu_ms)} ms avg`];
         if (!Host.Metrics.Enabled)
-            return ["GPU pass timings need the timestamp-query feature;", "this adapter does not expose it."];
-        return Object.entries(Host.Metrics.Durations).filter(([, Milliseconds]) => Milliseconds > 0.0)
-                     .map(([Name, Milliseconds]) => `${Name.padEnd(24)}${Milliseconds.toFixed(2).padStart(7)} ms`);
+            Lines.push("GPU timestamps unavailable on this adapter.");
+        else
+            Lines.push(...Object.entries(Host.Metrics.Durations).filter(([Name]) => Host.Metrics.PassSamples[Name] > 0)
+                .map(([Name, Milliseconds]) => `GPU ${Name.padEnd(20)} ${Milliseconds.toFixed(2)} ms EMA`));
+        return Lines;
     });
-    C.Button(Timing, "Copy timing log", "Activity", () => Host.CopyTimingLog());
+    const LogActions = C.ActionRow(Timing);
+    C.Button(LogActions, "Copy JSON", "Copy", () => Host.CopyTimingLog(), "primary");
+    C.Button(LogActions, "Download JSON", null, () => Host.DownloadTimingLog());
 }
 
 function BuildField(Host, C, Body)
@@ -396,19 +424,37 @@ function BuildVehicle(Host, C, Body)
              () => [`cluster overflow ${Host.Lighting ? Host.Lighting.ClusterOverflow : 0}`, ""]);
     C.Muted(LightingCard, "Clustered analytic light sources: hand-tuned beam profiles (batwing street lamps, low/high/fog beams, roof flood), binned per frame into a world-space grid and coupled to surface cards for multi-bounce GI.");
 
-    const Camera = C.Card(Body, "Camera", "Camera", { Accent: Accent.Vehicle, Index: 4 });
-    C.Segmented(Camera, { Free: Host.FreeCamera }, "Free", [["Car rigs", false], ["Free (F8)", true]], { OnChange: (Free) => Host.AssignCamera(Free) });
-    C.Select(Camera, S, "CameraMode", Object.keys(CameraRigs).map((Name) => [Name, Name]), { Label: "Rig (C cycles)", OnChange: (Mode) => Host.AssignCameraMode(Mode) });
-    const OrbitRow = C.ActionRow(Camera);
+}
+
+function BuildCamera(Host, C, Body)
+{
+    const S = Host.Settings;
+    const Rig = C.Card(Body, "Camera rig", "Camera", { Accent: Accent.Vehicle, Index: 1 });
+    C.Segmented(Rig, { Free: Host.FreeCamera }, "Mode", [["Car rigs", false], ["Free (F8)", true]],
+                { OnChange: (Free) => Host.AssignCamera(Free) });
+    C.Select(Rig, S, "CameraMode", Object.keys(CameraRigs).map((Name) => [Name, Name]),
+             { Label: "Rig (C cycles)", OnChange: (Mode) => Host.AssignCameraMode(Mode) });
+    const OrbitRow = C.ActionRow(Rig);
     C.Button(OrbitRow, "Orbit vehicle", "Camera", () => Host.AssignCameraMode("Orbit"));
     C.Button(OrbitRow, "Reset orbit", "RotateCcw", () => { Host.Orbit.Reset(); Host.PriorValid = false; });
-    C.Muted(Camera, "Orbit: drag for 360° rotation, scroll to zoom. View angle stays where you leave it—even as the car turns. No chase recentering, shake or speed FOV.");
-    C.Switch(Camera, S, "CameraShake", { Label: "Driving camera shake" });
-    Slider(C, Camera, S, "CameraShakeStrength", "Shake strength", 0, 1, 0.05, "×", 2);
-    C.Switch(Camera, S, "SpeedFov", { Label: "Speed-based FOV" });
-    Slider(C, Camera, S, "SpeedFovBoost", "FOV boost at speed", 0, 24, 1, "°", 0);
-    C.Muted(Camera, "Shake and speed FOV apply to driving cameras only; the HMI touch view and tyre inspection stay steady.");
-    C.Muted(Camera, "Drag to orbit the chase camera, wheel to zoom; inside the car drag to look around and click the tablet to use it. Free camera: WASD, Q/E, Shift.");
+    C.Switch(Rig, S, "CameraShake", { Label: "Driving camera shake" });
+    Slider(C, Rig, S, "CameraShakeStrength", "Shake strength", 0, 1, 0.05, "×", 2);
+    C.Switch(Rig, S, "SpeedFov", { Label: "Speed-based FOV" });
+    Slider(C, Rig, S, "SpeedFovBoost", "FOV boost at speed", 0, 24, 1, "°", 0);
+    C.Muted(Rig, "Shake and speed FOV apply to driving cameras only; HMI touch focus and tyre inspection stay steady. Orbit drag rotates through 360°; the wheel zooms.");
+
+    const Components = C.Card(Body, "Camera components", "Aperture", { Accent: Accent.Vehicle, Index: 2 });
+    const MotionBlur = Host.CameraEntity.Components.MotionBlur;
+    C.Metric(Components, () => MotionBlur.Enabled ? "Enabled" : "Disabled", "motion blur", 0,
+             () => ["Attached to VehicleHMI camera", MotionBlur.Enabled ? "live" : ""]);
+    C.Switch(Components, MotionBlur, "Enabled", {
+        Label: "Motion blur component",
+        Detail: "Camera-owned · proving/training grounds only",
+        OnChange: () => { Host.PriorValid = false; }
+    });
+    Slider(C, Components, MotionBlur, "Strength", "Blur strength", 0, 1, 0.05, "×", 2,
+           ["Subtle", "Strong"], () => { Host.PriorValid = false; });
+    C.Muted(Components, "Drive or move the camera to see the effect—stationary pixels have no blur. The camera-owned component is off by default and affects this demo only.");
 }
 
 function BuildCabin(Host, C, Body)

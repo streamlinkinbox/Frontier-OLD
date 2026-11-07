@@ -155,15 +155,15 @@ python3 -m http.server 8080 --bind 0.0.0.0
 
 The page is laid out like the native Frontier editor — **Outliner · Viewport · Inspector** columns with tab
 headers and a status bar — in the browser editor's styling (DM Sans, the card/metric/slider/switch vocabulary,
-lucide glyphs; `Style/FrontierEditor.css`, `Source/EditorShell.js`, `Source/EditorControls.js`). The outliner
+lucide glyphs; `Style/FrontierEditor.css` plus the warm-card/pill reference pass in `Style/InspectorReference.css`, `Source/EditorShell.js`, `Source/EditorControls.js`). Spacing, rounded cards, segmented controls and the quick-action tiles follow the Sun inspector and Studio Outliner captures. The outliner
 groups the scene; selecting an entry rebuilds the inspector (`Source/InspectorPages.js`):
 
 | Outliner entry | Inspector |
 | --- | --- |
-| **Render settings** | resolution & quality grade, trace resolution, render scale; ReSTIR temporal/spatial reuse, visibility validation, M limit, indirect intensity; exposure, shadows, reflections, SVGF, TAA; debug views; frame timing and GPU pass timings |
+| **Render settings** | resolution & quality grade, trace resolution, render scale; ReSTIR temporal/spatial reuse, visibility validation, M limit, indirect intensity; exposure, shadows, reflections, SVGF, TAA; debug views; separate CPU/GPU timings, shareable JSON capture and a reversible fast profile |
 | Global distance field · Surface cache | cascade state and freezing, slice inset; card radiosity and relighting budget |
 | Sun & sky | presets (Noon · Golden · Dusk · Night), sun direction, solar / sky / emitter intensity |
-| ControlVehicle · Tyre marks | telemetry, **burnout / line lock**, **tyres** (pressures per axle, rigid tyre visuals and **countersteer assist**, wear, failure, puncture / blowout / shred buttons, physical deflection · tread readouts), ignition, thermal grip, **camera rigs**; rubber/rim deposits |
+| ControlVehicle · **Camera** · Cabin · HMI · Tyre marks | telemetry, **burnout / line lock**, **tyres** (pressures per axle, rigid tyre visuals and **countersteer assist**, wear, failure, puncture / blowout / shred buttons, physical deflection · tread readouts); **Camera** is a visible child entity with its own Camera Rig and Camera Components cards (including the motion-blur component toggle/strength); cabin/HMI, ignition, thermal grip and rubber/rim deposits |
 | **Cabin · HMI** | the TabletPanel HMI live in the car (screens, brightness, open an app), **HUD size/position** (no physical cockpit movement), see-through glass and its transmission, mirror views, interior cameras |
 | **Smoke & fire** | the Smoke + Fire editor: Domain, Source, Simulation, Appearance, Fire, Presets — every gas quantity as a slider, plus a test emitter |
 | **Derez · VFX** | the Particle Editor's Derez cube · Reverse derez · Glitch dissolve presets, cube timing and motion, **the car's own colours or the palette**, face glow, **momentum**, recovery triggers, test buttons |
@@ -484,12 +484,12 @@ WebGPU-browser driving review; Dawn null-backend validation does not render pixe
 
 ## Driving camera effects and overlay binding compatibility
 
-**Vehicle → Camera** has switches for driving shake and speed-based FOV, plus shake
-strength (0–1) and maximum FOV boost (0–24°). Defaults are gentle shake and a 14°
-boost, smoothed with speed up to 45 m/s. Acceleration/landing jolts add bounded
-transient vibration. Chase, cockpit, passenger and hood cameras participate;
-HMI touch focus, tyre inspection and free camera remain unchanged. Disable either
-effect independently for comfort.
+**Vehicle → Camera** has switches for driving shake, speed-based FOV and camera-owned motion blur, plus shake
+strength (0–1), blur strength (0–1) and maximum FOV boost (0–24°). Blur uses the camera component and the existing
+screen-motion vectors in the Vehicle Proving Grounds resolve path only; it does not affect the native editor or other
+exhibits. Defaults are gentle shake and a 14° boost, smoothed with speed up to 45 m/s. Acceleration/landing jolts add
+bounded transient vibration. HMI touch focus, tyre inspection and free camera remain unchanged. Disable each effect
+independently for comfort.
 
 The Cabin overlay schema explicitly includes exposure storage binding 12 and has
 regression coverage against the shader declaration. The entry-point/cabin imports
@@ -497,9 +497,13 @@ are versioned to avoid mixing old JavaScript layouts with new WGSL. `npm run ser
 now uses `Tools/Serve.py`, which sends no-store headers for preview resources. If
 an old error page is still open, reload the preview once to load the updated modules.
 
-Validation for this change: 30 tests pass; 36-frame effects and 48-frame active
-plume/HMI runs report zero errors and warnings. Dawn null validation does not prove
-rendered appearance or subjective camera comfort.
+The current browser-independent test suite is `npm test` in this exhibit (67 tests). These tests cover the camera component and JSON capture schema; they do not substitute for a real WebGPU-browser shader/visual review.
+
+## Shareable performance captures and optimization controls
+
+In **Render settings → Frame timing**, enable **Log every second** to emit one-line `vehiclehmi_perf_v1` JSON records in the browser developer console. **Copy JSON** copies the latest complete window (or the current partial window before the first automatic record); **Download JSON** saves it as a `.json` file for attaching here. Captures include the browser/adapter, quality and render settings, scene workload, frame delta, and separate CPU wall-time and GPU timestamp-query sections. CPU metrics cover the full frame callback, scene update, command encoding and queue-submit call. GPU pass times are asynchronous, labelled as smoothed EMA and latest sample, and reported as unavailable/null when timestamp queries are unsupported—never as a misleading zero. Share the JSON file or console line for stage-by-stage analysis.
+
+Use **Apply fast profile** to save the current render settings and lower the quality/render scale, trace resolution, reflection, smoke, direct shadows, card radiosity and tile budget; **Restore saved** returns the saved settings. Use this as a quick A/B experiment, then share before/after captures. The profile leaves camera effects independent.
 
 ## Independent vehicle orbit camera
 

@@ -1,46 +1,71 @@
-import test from "node:test";
 import assert from "node:assert/strict";
+import test from "node:test";
+import { ComposeTimingLog, SummariseTimingSamples } from "../Source/TimingLog.js";
 
-import { ComposeTimingLog } from "../Source/TimingLog.js";
-
-// 📝 The timing log the inspector's button copies: header, toggles, frame rate and every pass duration. The zero
-//    durations matter as much as the live ones — a 0.00 ms "Depth pyramid" with the traces off is the gating proof.
-
-function ConstructSnapshot(Overrides = {})
-{
-    return {
-        GradeName: "high", ScreenExtent: [1920, 1080], TraceScaleUsed: 2, TraceExtent: [960, 540], FrameIndex: 120,
-        Settings: { Indirect: true, ScreenTraversal: false, TriangleReflection: false, Reflection: true, TemporalReuse: true,
-                    SpatialReuse: true, VisibilityReuse: true, VarianceKernel: true, CardRadiosity: true, DirectShadow: true,
-                    Antialias: true, SmokeEnabled: true },
-        FrameSeconds: 1.0 / 60.0, LowRate: "58", MetricsEnabled: true,
-        PassNames: ["Distance union", "Card lighting", "Shadow", "Surface", "Depth pyramid", "Direct"],
-        Durations: { "Distance union": 1.25, "Card lighting": 0.5, Shadow: 2.0, Surface: 3.75, "Depth pyramid": 0.0, Direct: 1.0 },
-        LightCount: 24, ClusterOverflow: 0,
-        ...Overrides
-    };
-}
-
-test("ComposeTimingLog reports quality, extents and every toggle", () =>
-{
-    const Log = ComposeTimingLog(ConstructSnapshot());
-    assert.ok(Log.includes("Vehicle Proving Grounds timing log"));
-    assert.ok(Log.includes("quality=high render=1920x1080 trace=1/2 (960x540) frame=120"));
-    assert.ok(Log.includes("screentraces=off triangles=off"));
-    assert.ok(Log.includes("60.0 fps (16.7 ms avg) 1% low 58"));
-    assert.ok(Log.includes("lights 24 cluster-overflow 0"));
+test("timing log is a shareable versioned JSON record with separate CPU and GPU sections", () => {
+    const Log = ComposeTimingLog({
+        CapturedAt: "2026-11-07T12:00:00.000Z",
+        WindowSeconds: 1.0,
+        GradeName: "high",
+        ScreenExtent: [1600, 900],
+        TraceExtent: [800, 450],
+        TraceScaleUsed: 2,
+        FrameIndex: 240,
+        FrameSeconds: 1 / 60,
+        LowRate: "48",
+        CpuSamples: {
+            frame_delta_ms: [16, 20, 18],
+            callback_cpu_ms: [3, 5, 4],
+            scene_update_cpu_ms: [1, 2, 1.5],
+            command_encode_cpu_ms: [1, 2, 1],
+            queue_submit_cpu_ms: [0.2, 0.3, 0.25]
+        },
+        MetricsEnabled: true,
+        PassNames: ["Surface", "Resolve", "Smoke"],
+        Durations: { Surface: 4.25, Resolve: 1.2, Smoke: 0 },
+        LastDurations: { Surface: 4.6, Resolve: 1.0, Smoke: 0 },
+        PassSamples: { Surface: 21, Resolve: 21, Smoke: 0 },
+        Settings: { Reflection: true },
+        LightCount: 8
+    });
+    const Record = JSON.parse(Log);
+    assert.equal(Record.schema, "vehiclehmi_perf_v1");
+    assert.equal(Record.captured_at_utc, "2026-11-07T12:00:00.000Z");
+    assert.equal(Record.frame.delta_time_ms.samples, 3);
+    assert.equal(Record.cpu_wall_time_ms.command_encode.average_ms, 1.333);
+    assert.equal(Record.gpu_timestamp_queries.status, "available");
+    assert.equal(Record.gpu_timestamp_queries.pass_ema_ms.Surface, 4.25);
+    assert.equal(Record.gpu_timestamp_queries.pass_last_ms.Resolve, 1);
+    assert.equal(Record.gpu_timestamp_queries.pass_ema_ms.Smoke, null);
+    assert.equal(Record.gpu_timestamp_queries.pass_sample_count.Smoke, 0);
+    assert.equal(Record.render_settings.Reflection, true);
 });
 
-test("ComposeTimingLog keeps zero pass durations so gating stays visible", () =>
-{
-    const Log = ComposeTimingLog(ConstructSnapshot());
-    const Pyramid = Log.split("\n").find((Line) => Line.includes("Depth pyramid"));
-    assert.ok(Pyramid.includes("0.00 ms"));
-    assert.equal(Log.split("\n").filter((Line) => Line.endsWith("ms")).length, 6);
+test("unavailable GPU timestamps are represented as unavailable and null, never zero-cost passes", () => {
+    const Record = JSON.parse(ComposeTimingLog({
+        MetricsEnabled: false,
+        PassNames: ["Surface"],
+        Durations: { Surface: 0 },
+        PassSamples: { Surface: 0 }
+    }));
+    assert.equal(Record.gpu_timestamp_queries.status, "unavailable");
+    assert.equal(Record.gpu_timestamp_queries.pass_ema_ms.Surface, null);
+    assert.equal(Record.gpu_timestamp_queries.pass_last_ms.Surface, null);
+    assert.equal(Record.cpu_wall_time_ms.callback.samples, 0);
+    assert.equal(Record.cpu_wall_time_ms.callback.average_ms, null);
 });
 
-test("ComposeTimingLog warns when timestamps are unavailable", () =>
-{
-    const Log = ComposeTimingLog(ConstructSnapshot({ MetricsEnabled: false, Durations: {} }));
-    assert.ok(Log.includes("gpu timestamps OFF"));
+test("sample summaries report stable average, percentile, maximum and sample count", () => {
+    assert.deepEqual(SummariseTimingSamples([4, 1, 3, 2]), {
+        samples: 4,
+        average_ms: 2.5,
+        p95_ms: 4,
+        max_ms: 4
+    });
+    assert.deepEqual(SummariseTimingSamples([]), {
+        samples: 0,
+        average_ms: null,
+        p95_ms: null,
+        max_ms: null
+    });
 });
