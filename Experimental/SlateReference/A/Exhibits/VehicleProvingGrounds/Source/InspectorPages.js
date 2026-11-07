@@ -89,7 +89,16 @@ export function ConstructEntities(Host)
           State: () => (Host.Vehicle.Burnout ? "warm" : "live"), Build: (C, B) => BuildVehicle(Host, C, B),
           Switches: () => [Feature("Line lock", "Flame", S, "LineLock"), Feature("Thermal grip", "Thermometer", S, "ThermalGrip"),
                            Feature("Tyre marks", "CircleDot", S, "TyreMarks"),
-                           Feature("Sparks", "Zap", S, "Sparks")] },
+                           Feature("Sparks", "Zap", S, "Sparks"),
+                           { Name: "Motion blur", Glyph: "Camera", Read: () => Host.CameraEntity.Components.MotionBlur.Enabled,
+                             Write: (On) => { Host.CameraEntity.Components.MotionBlur.Enabled = On; Host.PriorValid = false; } }] },
+        { Id: "camera", Group: "Vehicle", Name: "Camera", Type: "Camera component host", Glyph: "Camera", Colour: Accent.Vehicle, Parent: "vehicle",
+          Description: "Camera rigs and attached post-process components",
+          Meta: () => `${S.CameraMode} · ${Host.CameraEntity.Components.MotionBlur.Enabled ? "blur on" : "blur off"}`,
+          State: () => Host.CameraEntity.Components.MotionBlur.Enabled ? "warm" : "live",
+          Build: (C, B) => BuildCamera(Host, C, B),
+          Switches: () => [{ Name: "Motion blur", Glyph: "Camera", Read: () => Host.CameraEntity.Components.MotionBlur.Enabled,
+                             Write: (On) => { Host.CameraEntity.Components.MotionBlur.Enabled = On; Host.PriorValid = false; } }] },
         { Id: "cabin", Group: "Vehicle", Name: "Cabin · HMI", Type: "Interior", Glyph: "Monitor", Colour: Accent.Vehicle, Parent: "vehicle",
           Description: "Tablet & cluster, mirrors, glass, interior cameras", Meta: () => S.CameraMode,
           State: () => (Host.Cabin && Host.Cabin.Screen ? "live" : "warm"), Build: (C, B) => BuildCabin(Host, C, B),
@@ -415,27 +424,37 @@ function BuildVehicle(Host, C, Body)
              () => [`cluster overflow ${Host.Lighting ? Host.Lighting.ClusterOverflow : 0}`, ""]);
     C.Muted(LightingCard, "Clustered analytic light sources: hand-tuned beam profiles (batwing street lamps, low/high/fog beams, roof flood), binned per frame into a world-space grid and coupled to surface cards for multi-bounce GI.");
 
-    const Camera = C.Card(Body, "Camera", "Camera", { Accent: Accent.Vehicle, Index: 4 });
-    C.Segmented(Camera, { Free: Host.FreeCamera }, "Free", [["Car rigs", false], ["Free (F8)", true]], { OnChange: (Free) => Host.AssignCamera(Free) });
-    C.Select(Camera, S, "CameraMode", Object.keys(CameraRigs).map((Name) => [Name, Name]), { Label: "Rig (C cycles)", OnChange: (Mode) => Host.AssignCameraMode(Mode) });
-    const OrbitRow = C.ActionRow(Camera);
+}
+
+function BuildCamera(Host, C, Body)
+{
+    const S = Host.Settings;
+    const Rig = C.Card(Body, "Camera rig", "Camera", { Accent: Accent.Vehicle, Index: 1 });
+    C.Segmented(Rig, { Free: Host.FreeCamera }, "Mode", [["Car rigs", false], ["Free (F8)", true]],
+                { OnChange: (Free) => Host.AssignCamera(Free) });
+    C.Select(Rig, S, "CameraMode", Object.keys(CameraRigs).map((Name) => [Name, Name]),
+             { Label: "Rig (C cycles)", OnChange: (Mode) => Host.AssignCameraMode(Mode) });
+    const OrbitRow = C.ActionRow(Rig);
     C.Button(OrbitRow, "Orbit vehicle", "Camera", () => Host.AssignCameraMode("Orbit"));
     C.Button(OrbitRow, "Reset orbit", "RotateCcw", () => { Host.Orbit.Reset(); Host.PriorValid = false; });
-    C.Muted(Camera, "Orbit: drag for 360° rotation, scroll to zoom. View angle stays where you leave it—even as the car turns. No chase recentering, shake or speed FOV.");
-    C.Switch(Camera, S, "CameraShake", { Label: "Driving camera shake" });
-    Slider(C, Camera, S, "CameraShakeStrength", "Shake strength", 0, 1, 0.05, "×", 2);
-    C.Switch(Camera, S, "SpeedFov", { Label: "Speed-based FOV" });
-    Slider(C, Camera, S, "SpeedFovBoost", "FOV boost at speed", 0, 24, 1, "°", 0);
-    C.Muted(Camera, "Shake and speed FOV apply to driving cameras only; the HMI touch view and tyre inspection stay steady.");
-    C.Switch(Camera, Host.ActiveCamera.MotionBlur, "Enabled", {
-        Label: "Camera motion blur",
-        Detail: "Camera component · Proving Grounds only",
+    C.Switch(Rig, S, "CameraShake", { Label: "Driving camera shake" });
+    Slider(C, Rig, S, "CameraShakeStrength", "Shake strength", 0, 1, 0.05, "×", 2);
+    C.Switch(Rig, S, "SpeedFov", { Label: "Speed-based FOV" });
+    Slider(C, Rig, S, "SpeedFovBoost", "FOV boost at speed", 0, 24, 1, "°", 0);
+    C.Muted(Rig, "Shake and speed FOV apply to driving cameras only; HMI touch focus and tyre inspection stay steady. Orbit drag rotates through 360°; the wheel zooms.");
+
+    const Components = C.Card(Body, "Camera components", "Aperture", { Accent: Accent.Vehicle, Index: 2 });
+    const MotionBlur = Host.CameraEntity.Components.MotionBlur;
+    C.Metric(Components, () => MotionBlur.Enabled ? "Enabled" : "Disabled", "motion blur", 0,
+             () => ["Attached to VehicleHMI camera", MotionBlur.Enabled ? "live" : ""]);
+    C.Switch(Components, MotionBlur, "Enabled", {
+        Label: "Motion blur component",
+        Detail: "Camera-owned · proving/training grounds only",
         OnChange: () => { Host.PriorValid = false; }
     });
-    Slider(C, Camera, Host.ActiveCamera.MotionBlur, "Strength", "Blur strength", 0, 1, 0.05, "×", 2,
+    Slider(C, Components, MotionBlur, "Strength", "Blur strength", 0, 1, 0.05, "×", 2,
            ["Subtle", "Strong"], () => { Host.PriorValid = false; });
-    C.Muted(Camera, "Uses the camera's screen-space motion vectors in the Vehicle Proving Grounds antialias/resolve pass. Other exhibits and the native editor are unaffected.");
-    C.Muted(Camera, "Drag to orbit the chase camera, wheel to zoom; inside the car drag to look around and click the tablet to use it. Free camera: WASD, Q/E, Shift.");
+    C.Muted(Components, "The camera component uses the scene's screen-space motion vectors in the Vehicle Proving Grounds resolve pass. It is off by default; enabling it affects this demo only.");
 }
 
 function BuildCabin(Host, C, Body)

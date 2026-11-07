@@ -141,7 +141,10 @@ class IlluminationHost
         this.FrameDurationCursor = 0;
         this.Keys = new Set();
         this.FrameIndex = 0;
-        this.ActiveCamera = { Name: "Vehicle Proving Grounds camera", MotionBlur: new CameraMotionBlur() };
+        this.CameraEntity = {
+            Name: "Vehicle Proving Grounds camera",
+            Components: { MotionBlur: new CameraMotionBlur() }
+        };
         this.PerformanceCapture = { Enabled: Query.get("perfLog") === "1" };
         this.PerformanceWindowSeconds = 0.0;
         this.PerformanceWindowSamples = this.ConstructPerformanceSamples();
@@ -1039,7 +1042,7 @@ class IlluminationHost
         if (this.Smoke.Resident && this.Settings.SmokeEnabled && !this.Omitted.has("Smoke")) Features |= 4096;
         // 📝 The camera component's 8-bit strength occupies reserved feature bits 16–23; the rest of the frame record stays ABI-stable.
         if (this.Settings.Inspection === 0)
-            Features |= Math.round(this.ActiveCamera.MotionBlur.ResolveStrength() * 255.0) << 16;
+            Features |= Math.round(this.CameraEntity.Components.MotionBlur.ResolveStrength() * 255.0) << 16;
         Integers[103] = Features;
         Integers[104] = this.Settings.Inspection;
         Scalars[105] = this.Settings.TemporalTallyLimit;
@@ -1459,8 +1462,8 @@ class IlluminationHost
             smoke: this.Settings.SmokeEnabled,
             denoiser: this.Settings.VarianceKernel,
             antialiasing: this.Settings.Antialias,
-            camera_motion_blur: this.ActiveCamera.MotionBlur.Enabled,
-            camera_motion_blur_strength: this.ActiveCamera.MotionBlur.Strength,
+            camera_motion_blur: this.CameraEntity.Components.MotionBlur.Enabled,
+            camera_motion_blur_strength: this.CameraEntity.Components.MotionBlur.Strength,
             stress_motion: this.Settings.StressMotion
         };
         return ComposeTimingLogSnapshot({
