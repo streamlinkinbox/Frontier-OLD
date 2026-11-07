@@ -454,7 +454,7 @@ function BuildCamera(Host, C, Body)
     });
     Slider(C, Components, MotionBlur, "Strength", "Blur strength", 0, 1, 0.05, "×", 2,
            ["Subtle", "Strong"], () => { Host.PriorValid = false; });
-    C.Muted(Components, "The camera component uses the scene's screen-space motion vectors in the Vehicle Proving Grounds resolve pass. It is off by default; enabling it affects this demo only.");
+    C.Muted(Components, "Drive or move the camera to see the effect—stationary pixels have no blur. The camera-owned component is off by default and affects this demo only.");
 }
 
 function BuildCabin(Host, C, Body)

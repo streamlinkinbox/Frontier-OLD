@@ -64,10 +64,11 @@ fn IntegrateAntialias(@builtin(global_invocation_id) Invocation: vec3u)
     }
     let Motion = textureLoad(SurfaceMotion, Pixel, 0).xy;
     let MotionBlurStrength = f32((Frame.Features >> 16u) & 255u) / 255.0;
-    let Current = CompressRange(ResolveCameraMotionBlur(Pixel, Motion, MotionBlurStrength));
+    let Current = CompressRange(textureLoad(RecombinedRadiance, Pixel, 0).rgb);
+    let CameraBlurred = CompressRange(ResolveCameraMotionBlur(Pixel, Motion, MotionBlurStrength));
     if (!FeatureEnabled(Frame, FeatureTemporalAntialias) || Frame.InspectionMode == 6u || Frame.InspectionMode == 7u)
     {
-        textureStore(AntialiasTarget, Pixel, vec4f(ExpandRange(Current), 1.0));
+        textureStore(AntialiasTarget, Pixel, vec4f(ExpandRange(CameraBlurred), 1.0));
         return;
     }
     var Minimum = vec3f(1.0e9);
@@ -105,5 +106,8 @@ fn IntegrateAntialias(@builtin(global_invocation_id) Invocation: vec3u)
         Prior = ReconstructRgb(clamp(ProjectCoCg(Prior), Minimum, Maximum));
     }
     let Resolved = mix(Prior, Current, Fraction);
-    textureStore(AntialiasTarget, Pixel, vec4f(ExpandRange(Resolved), 1.0));
+    // 📝 Composite a portion of the shutter-blurred current image after temporal history; otherwise TAA's 90 % prior weight
+    //    would immediately erase the camera blur and make the component appear to do nothing while the camera moves.
+    let BlurComposite = mix(Resolved, CameraBlurred, clamp(MotionBlurStrength * 0.85, 0.0, 0.85));
+    textureStore(AntialiasTarget, Pixel, vec4f(ExpandRange(BlurComposite), 1.0));
 }

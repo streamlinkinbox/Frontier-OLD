@@ -497,7 +497,7 @@ are versioned to avoid mixing old JavaScript layouts with new WGSL. `npm run ser
 now uses `Tools/Serve.py`, which sends no-store headers for preview resources. If
 an old error page is still open, reload the preview once to load the updated modules.
 
-The current browser-independent test suite is `npm test` in this exhibit (66 tests). These tests cover the camera component and JSON capture schema; they do not substitute for a real WebGPU-browser shader/visual review.
+The current browser-independent test suite is `npm test` in this exhibit (67 tests). These tests cover the camera component and JSON capture schema; they do not substitute for a real WebGPU-browser shader/visual review.
 
 ## Shareable performance captures and optimization controls
 
