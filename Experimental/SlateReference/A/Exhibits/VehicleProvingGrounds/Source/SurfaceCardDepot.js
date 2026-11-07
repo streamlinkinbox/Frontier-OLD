@@ -25,6 +25,10 @@ export class SurfaceCardDepot
         this.WarmFrames    = 6;
         this.OccupantTiles = [];
         this.PriorityTiles = [];
+        // 📝 Per-frame scheduling scratch: emptied and reused, never reallocated.
+        this.ScheduledScratch = [];
+        this.ClaimScratch = new Set();
+        this.TileScratch = new Uint32Array(0);
         this.PriorityFrames = 0;
         this.ScheduledTiles = 0;
         this.OccupiedTexels = 0;
@@ -321,18 +325,28 @@ export class SurfaceCardDepot
     //    everything so the depot starts lit and its radiosity has taken several bounces before the first image.
     ScheduleTiles(TileBudget)
     {
-        const Scheduled = this.DynamicTiles.slice();
+        // 📝 One list and one claim set, emptied rather than reallocated: this runs every frame, and the pack below grows
+        //    its buffer on demand, so the scheduler allocates nothing in the steady state.
+        const Scheduled = this.ScheduledScratch;
+        Scheduled.length = 0;
+        for (const Assignment of this.DynamicTiles)
+            Scheduled.push(Assignment);
         if (this.WarmFrames > 0)
         {
-            Scheduled.push(...this.StaticTiles);
+            for (const Assignment of this.StaticTiles)
+                Scheduled.push(Assignment);
             this.WarmFrames--;
         }
         else
         {
             // 📝 A tile must not be scheduled twice in one frame: the radiosity pass folds into its sites in place.
             const Priority = this.PriorityFrames > 0 ? this.PriorityTiles : [];
-            const Claimed = new Set(Priority.map((Assignment) => Assignment[0] * 4194304 + Assignment[1]));
-            Scheduled.push(...Priority);
+            const Claimed = this.ClaimScratch;
+            Claimed.clear();
+            for (const Assignment of Priority)
+                Claimed.add(Assignment[0] * 4194304 + Assignment[1]);
+            for (const Assignment of Priority)
+                Scheduled.push(Assignment);
             if (this.PriorityFrames > 0)
                 this.PriorityFrames--;
             const Budget = Math.min(this.StaticTiles.length, Math.max(0, TileBudget));
@@ -344,16 +358,18 @@ export class SurfaceCardDepot
                     Scheduled.push(Assignment);
             }
         }
-        const Packed = new Uint32Array(Scheduled.length * 2);
-        Scheduled.forEach((Assignment, Index) =>
+        if (this.TileScratch.length < Scheduled.length * 2)
+            this.TileScratch = new Uint32Array(Scheduled.length * 2);
+        const Packed = this.TileScratch;
+        for (let Index = 0; Index < Scheduled.length; ++Index)
         {
-            Packed[Index * 2] = Assignment[0];
-            Packed[Index * 2 + 1] = Assignment[1];
-        });
+            Packed[Index * 2] = Scheduled[Index][0];
+            Packed[Index * 2 + 1] = Scheduled[Index][1];
+        }
         this.ScheduledTiles = Scheduled.length;
         const Device = this.Exchange.Device;
         if (Scheduled.length > 0)
-            Device.queue.writeBuffer(this.TileRecords, 0, Packed);
+            Device.queue.writeBuffer(this.TileRecords, 0, Packed, 0, Scheduled.length * 2);
         const Work = new ArrayBuffer(16);
         new Uint32Array(Work, 0, 2).set([Scheduled.length, this.SiteStride]);
         new Float32Array(Work, 8, 2).set([0.15, 0.35]);

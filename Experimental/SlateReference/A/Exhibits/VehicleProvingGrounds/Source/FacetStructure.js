@@ -298,6 +298,10 @@ export class SceneStructure
         });
         this.DrawRuns = Runs;
         this.ShadowRuns = ShadowRuns;
+        // 📝 The occupants whose transforms decide whether the sun cascades are still valid: the same set the shadow runs
+        //    draw, in identity order (the ground is excluded — it never casts onto the course).
+        this.ShadowCasterIndices = ShadowRuns.flatMap((Run) =>
+            Array.from({ length: Run.Count }, (_, Offset) => Run.First + Offset));
     }
 
     // 📝 The union's active list: every enabled distance occupant of the span, in identity order (so ties resolve as

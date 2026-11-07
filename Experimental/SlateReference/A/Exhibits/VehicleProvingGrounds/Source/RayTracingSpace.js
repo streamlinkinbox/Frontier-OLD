@@ -397,6 +397,16 @@ export class RayTracingSpace
         this.ScratchCentX   = new Float32Array(MaxOccupants);
         this.ScratchCentY   = new Float32Array(MaxOccupants);
         this.ScratchCentZ   = new Float32Array(MaxOccupants);
+        // 📝 The binned-SAH split is evaluated once per node, and it used to allocate seven arrays per node per rebuild.
+        //    One set, reused: the counts are zeroed and the bounds re-seeded at the top of every split, so the tree is
+        //    bit-identical while the per-frame garbage disappears.
+        this.BinCounts = new Uint32Array(TlasBinCount);
+        this.BinMinX   = new Float32Array(TlasBinCount);
+        this.BinMinY   = new Float32Array(TlasBinCount);
+        this.BinMinZ   = new Float32Array(TlasBinCount);
+        this.BinMaxX   = new Float32Array(TlasBinCount);
+        this.BinMaxY   = new Float32Array(TlasBinCount);
+        this.BinMaxZ   = new Float32Array(TlasBinCount);
     }
 
     // 📝 Builds the CPU hierarchy, uploads it, and writes the first TLAS. The two buffers join the reflection pass's
@@ -693,13 +703,15 @@ export class RayTracingSpace
             if (High - Low > 1.0e-5 && Count >= 4)
             {
                 // Binned SAH split along chosen axis
-                const BinCounts = new Uint32Array(TlasBinCount);
-                const BinMinX   = new Float32Array(TlasBinCount).fill(Infinity);
-                const BinMinY   = new Float32Array(TlasBinCount).fill(Infinity);
-                const BinMinZ   = new Float32Array(TlasBinCount).fill(Infinity);
-                const BinMaxX   = new Float32Array(TlasBinCount).fill(-Infinity);
-                const BinMaxY   = new Float32Array(TlasBinCount).fill(-Infinity);
-                const BinMaxZ   = new Float32Array(TlasBinCount).fill(-Infinity);
+                const BinCounts = this.BinCounts, BinMinX = this.BinMinX, BinMinY = this.BinMinY, BinMinZ = this.BinMinZ;
+                const BinMaxX = this.BinMaxX, BinMaxY = this.BinMaxY, BinMaxZ = this.BinMaxZ;
+                BinCounts.fill(0);
+                BinMinX.fill(Infinity);
+                BinMinY.fill(Infinity);
+                BinMinZ.fill(Infinity);
+                BinMaxX.fill(-Infinity);
+                BinMaxY.fill(-Infinity);
+                BinMaxZ.fill(-Infinity);
                 const Scale     = TlasBinCount / (High - Low);
 
                 for (let I = First; I < First + Count; ++I)

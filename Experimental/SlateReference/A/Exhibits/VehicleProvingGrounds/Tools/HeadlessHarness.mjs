@@ -168,6 +168,10 @@ while (FramesRun < FrameLimit)
         Callback(Started + Simulated);
         if (globalThis.IlluminationExhibit && globalThis.IlluminationExhibit.Ready)
             FramesRun = globalThis.IlluminationExhibit.FrameIndex;
+        // 📝 Optional per-frame observation hook: lets a test read what the host actually recorded, rather than
+        //    re-deriving it from the settings it set.
+        if (Host && Host.Ready && Hooks.AfterFrame)
+            Hooks.AfterFrame(Host, FramesRun);
     }
     const Host = globalThis.IlluminationExhibit;
     if ((Host && Host.Failed) || document.getElementById("failure").children.length > 0)

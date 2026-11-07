@@ -19,6 +19,17 @@ export class ShadowProjection
         this.Shaders  = Shaders;
         this.Extent   = Extent;
         this.Cascades = [];
+        // 📝 Cascade reuse: resolved from the snapped matrices and the shadow casters alone. When neither moved, the
+        //    depth the previous frame wrote is still exactly what this frame would write, so the raster can be skipped.
+        //    The depth is never cleared in that case (loadOp "load"), so the texture keeps its own contents.
+        this.Reuse         = true;
+        this.CascadeCasterKey = null;
+        this.Dirty         = [true, true, true];
+        this.Rasterised    = [false, false, false];
+        this.CascadeSignature = ["", "", ""];
+        this.CascadeAnchor    = [null, null, null];
+        this.CasterKey     = "";
+        this.SkippedCascades = 0;
     }
 
     async ConstructResources(OccupantRecords)
@@ -44,6 +55,28 @@ export class ShadowProjection
             DepthStencil: { format: "depth32float", depthWriteEnabled: true, depthCompare: "less",
                             depthBias: 2, depthBiasSlopeScale: 2.0, depthBiasClamp: 0.01 }
         }, [this.Layout]);
+    }
+
+    // 📝 One number per shadow-casting occupant: its world transform, quantised. Quantising matters — a parked car whose
+    //    suspension settles by fractions of a millimetre must not invalidate the cascades every frame, exactly as the
+    //    distance field's own invalidation tolerance decided.
+    SetCasterKey(Scene)
+    {
+        // 📝 The quantum is a centimetre, deliberately coarse. A car resting on its suspension is never bit-still — the
+        //    solver settles it by fractions of a millimetre every frame — and quantising at that scale makes the key flip
+        //    constantly, which defeats the reuse it exists to enable. A centimetre is an order of magnitude below the
+        //    finest cascade's texel (2·Radius / Extent ≈ 2 cm for the near slice), so a caster that moved less than that
+        //    cannot move a silhouette across a shadow texel anyway.
+        const Quantum = 100.0;   // [1/m] one centimetre
+        let Key = "";
+        for (const Index of Scene.ShadowCasterIndices)
+        {
+            const Transform = Scene.Occupants[Index].Transform;
+            Key += `${Index}:`;
+            for (let Element = 0; Element < 16; ++Element)
+                Key += `${Math.round(Transform[Element] * Quantum)},`;
+        }
+        this.CasterKey = Key;
     }
 
     // 📝 Each cascade is the bounding sphere of its frustum slice, so its footprint is rotation-invariant; the sphere
@@ -91,8 +124,25 @@ export class ShadowProjection
             const Projection = ConstructOrthographicTransform(-Radius + OffsetX, Radius + OffsetX, -Radius + OffsetY, Radius + OffsetY,
                                                               1.0, Reach + Radius + 60.0);
             const LightViewProjection = MultiplyTransform(Projection, View);
-            this.Cascades.push({ LightViewProjection, TexelWorld });
+            // 📝 Reuse is a bounded drift, not a frozen copy. The depth was rasterised with some earlier matrix; while
+            //    the freshly computed matrix stays within a sub-texel of *that* matrix, the depth it holds still addresses
+            //    the same shadow texels to within the depth buffer's own quantisation, so the raster can be skipped.
+            //
+            //    The comparison anchor therefore advances every frame even when the cascade is reused. Measuring against
+            //    the frozen matrix instead would accumulate: each skip leaves the reference one frame stale, so a camera
+            //    that is still easing would alternate skip/redraw forever instead of settling into reuse.
+            const Tolerance = (2.0 / this.Extent) * 0.125;
+            let Anchor = this.CascadeAnchor[Cascade];
+            let Drifted = !Anchor || this.CascadeSignature[Cascade] !== this.CasterKey;
+            for (let Element = 0; Element < 16 && !Drifted; ++Element)
+                Drifted = Math.abs(LightViewProjection[Element] - Anchor[Element]) > Tolerance;
+            this.CascadeSignature[Cascade] = this.CasterKey;
+            this.Dirty[Cascade] = !this.Reuse || !this.Rasterised[Cascade] || Drifted;
+            // 📝 The anchor advances every frame either way, so the error never compounds past one tolerance away from
+            //    the depth actually on screen: a redraw anchors on what was just rasterised, a reuse on what it absorbed.
+            this.CascadeAnchor[Cascade] = LightViewProjection;
             Receiver.set(LightViewProjection, Cascade * 16);
+            this.Cascades.push({ LightViewProjection, TexelWorld });
             Receiver[48 + Cascade] = Far;
             Receiver[52 + Cascade] = TexelWorld;
         }
@@ -129,12 +179,22 @@ export class ShadowProjection
     {
         // 📝 The car's runs always take the vehicle program now: its tyres deform and its glazing may let the sun in.
         const Masked = !!this.MaskedProgram;
+        this.SkippedCascades = 0;
         for (let Cascade = 0; Cascade < CascadeCount; ++Cascade)
         {
+            // 📝 Reuse: when neither the snapped matrix nor any caster moved since this cascade was last drawn, the depth
+            //    it holds is exactly the depth this frame would write. Skipping the raster is therefore image-identical —
+            //    the attachment is loaded, not cleared, so its contents survive untouched.
+            if (!this.Dirty[Cascade] && this.Rasterised[Cascade])
+            {
+                this.SkippedCascades++;
+                continue;
+            }
             const Pass = Encoder.beginRenderPass({
                 label: `Shadow cascade ${Cascade}`,
                 colorAttachments: [],
-                depthStencilAttachment: { view: this.LayerViews[Cascade], depthClearValue: 1.0, depthLoadOp: "clear", depthStoreOp: "store" },
+                depthStencilAttachment: { view: this.LayerViews[Cascade], depthClearValue: 1.0,
+                                          depthLoadOp: this.Rasterised[Cascade] ? "load" : "clear", depthStoreOp: "store" },
                 timestampWrites: ProjectCascadeTimestamps(TimestampWrites, Cascade)
             });
             Pass.setVertexBuffer(0, VertexRecords);
@@ -153,6 +213,7 @@ export class ShadowProjection
                 Pass.draw(Set.VertexCount, Run.Count, Set.FirstVertex, Run.First);
             }
             Pass.end();
+            this.Rasterised[Cascade] = true;
         }
     }
 }

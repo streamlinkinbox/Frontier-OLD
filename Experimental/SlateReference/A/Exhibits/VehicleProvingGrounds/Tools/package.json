@@ -10,7 +10,10 @@
     "validate:effects": "HOOKS=VehicleEffectsHooks.mjs node HeadlessHarness.mjs .. 36 \"?capture=1\"",
     "validate:slate": "HOOKS=SlateIntegrationHooks.mjs node HeadlessHarness.mjs .. 48 \"?capture=1\"",
     "validate:orbit": "HOOKS=VehicleOrbitHooks.mjs node HeadlessHarness.mjs .. 30 \"?capture=1\"",
-    "validate:garden": "HOOKS=GardenIorHooks.mjs node HeadlessHarness.mjs .. 12 \"?capture=1&screentraces&triangles\""
+    "validate:garden": "HOOKS=GardenIorHooks.mjs node HeadlessHarness.mjs .. 12 \"?capture=1&screentraces&triangles\"",
+    "validate:motionblur": "HOOKS=MotionBlurHooks.mjs node HeadlessHarness.mjs .. 40 \"?capture=1\"",
+    "validate:cascades": "HOOKS=CascadeReuseHooks.mjs node HeadlessHarness.mjs .. 44 \"?capture=1\"",
+    "validate:performance": "HOOKS=PerformancePanelHooks.mjs node HeadlessHarness.mjs .. 20 \"?capture=1\""
   },
   "devDependencies": {
     "webgpu": "0.6.2"

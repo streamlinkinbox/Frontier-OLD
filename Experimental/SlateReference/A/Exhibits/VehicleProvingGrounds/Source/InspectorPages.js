@@ -150,6 +150,11 @@ export function ConstructEntities(Host)
         { Id: "cones", Group: "Level", Name: "Cones", Type: "Rigid bodies", Glyph: "TrafficCone", Colour: Accent.Level, Parent: "training",
           Description: "Knockable cones · rez back on reset", Meta: () => `${Host.Cones.Cones.length}`,
           State: () => (Host.Cones.Metrics.Moving > 0 ? "warm" : "live"), Build: (C, B) => BuildCones(Host, C, B) },
+        { Id: "performance", Group: "Render", Name: "Performance lab", Type: "Diagnostics", Glyph: "Gauge", Colour: Accent.Render,
+          Description: "Hold, A/B the optimisations, attribute every stage", Meta: () => (S.HoldScene ? "held" : "live"),
+          State: () => (S.HoldScene ? "warm" : "live"), Build: (C, B) => BuildPerformance(Host, C, B),
+          Switches: () => [Feature("Hold", "Pause", S, "HoldScene"),
+                           { Name: "Cascade reuse", Glyph: "Layers", Read: () => S.ShadowCascadeReuse, Write: (On) => { S.ShadowCascadeReuse = On; } }] },
         { Id: "level", Group: "Level", Name: "Proving grounds", Type: "Level", Glyph: "Map", Colour: Accent.Level,
           Description: "Zones, teleports & scene budget", Meta: () => `${LevelZones.length} zones`, State: () => "live", Build: (C, B) => BuildLevel(Host, C, B) },
         { Id: "stress", Group: "Level", Name: "Stress test", Type: "Object pool", Glyph: "Boxes", Colour: Accent.Level,
@@ -911,6 +916,62 @@ function BuildStress(Host, C, Body)
     C.Button(Row2, "Clear", "Trash2", () => Host.ApplySetting("StressClear"), "danger");
     C.Segmented(Stress, S, "StressMotion", StressMotionOptions, { Label: "Motion", OnChange: () => Host.ApplySetting("StressMotion") });
     C.Readout(Stress, () => Host.Stress.QueryReadout());
+}
+
+//------------------------------------------------------------------------------------------------------------------------
+//                                                  PERFORMANCE LAB
+//------------------------------------------------------------------------------------------------------------------------
+
+// 📝 Two kinds of switch live here and must never be confused. The attribution switches REMOVE a stage, so the image
+//    changes — they answer "what does this stage cost?" and nothing else. The optimisation switches are image-identical,
+//    so their frame-time delta is a real win. A panel that mixes the two will "prove" a win by showing a different picture.
+const AttributionStages = [
+    ["Distance union", "Union"], ["Card lighting", "Cards"], ["Shadow cascades", "Shadow"], ["Surface", "Surface"],
+    ["Direct + sun", "Direct"], ["ReSTIR GI", "Resampling"], ["Diffuse denoise", "Diffuse"], ["Reflections", "Reflection"],
+    ["Glossy denoise", "Glossy"], ["Smoke", "Smoke"], ["Cabin overlay", "Cabin"], ["Sparks", "Sparks"]
+];
+
+function BuildPerformance(Host, C, Body)
+{
+    const S = Host.Settings;
+    const Read = C.Card(Body, "What the frame costs", "Gauge", { Accent: Accent.Render, Index: 1 });
+    C.Metric(Read, () => (1.0 / Math.max(Host.FrameSeconds || 1, 1.0e-4)).toFixed(0), "fps", 0,
+             () => [`${((Host.FrameSeconds || 0) * 1000).toFixed(1)} ms`, Host.Metrics.Enabled ? "timestamps live" : "no timestamps"]);
+    C.Stats(Read, [
+        ["1% low", () => Host.LowRate || "–", ""],
+        ["Cascades reused", () => `${Host.Shadow.Rasterised.filter((Drawn) => !Drawn).length}/3`, ""],
+        ["Wavelet steps staged", () => Host.Diffuse.WaveletProgram ? "3 of 5" : "–", ""]
+    ]);
+    C.Muted(Read, "Hold freezes the car, the camera and the solver clock. Compare two settings only while held: on a moving "
+                + "car the frame-to-frame difference is larger than any optimisation, and the comparison measures nothing.");
+
+    const Measure = C.Card(Body, "Measurement", "Activity", { Accent: Accent.Render, Index: 2 });
+    C.Switch(Measure, S, "HoldScene", { Label: "Hold the scene", Detail: "Freezes the simulation so A and B see the same view" });
+    C.Muted(Measure, "Hold, change one optimisation, and watch that stage's GPU milliseconds. The timestamp EMA is smoothed "
+                    + "over 15%, so give it a second before reading a number.");
+
+    const Optimisations = C.Card(Body, "Optimisations · image-identical", "Layers",
+                                 { Accent: Accent.Render, Index: 3, Subtitle: "Default on; switch off to measure what they save" });
+    C.Switch(Optimisations, S, "ShadowCascadeReuse",
+             { Label: "Reuse static shadow cascades", Detail: "Skips the cascade raster when its matrix and casters are unchanged" });
+    C.Switch(Optimisations, S, "SharedWaveletTile",
+             { Label: "Stage the wavelet tile", Detail: "Shared-memory tile for the denoiser's 5×5 taps" });
+    C.Muted(Optimisations, "Every switch here computes the same pixels: same taps, same weights, same matrices, same order. "
+                         + "A perf log with these off is byte-for-byte the same image, which is what makes their saving real.");
+
+    const Motion = C.Card(Body, "Motion blur", "Aperture", { Accent: Accent.Vehicle, Index: 4 });
+    const Blur = Host.CameraEntity.Components.MotionBlur;
+    C.Switch(Motion, Blur, "Enabled", { Label: "Camera motion blur", Detail: "Its own pass after the antialiasing" });
+    Slider(C, Motion, Blur, "Strength", "Exposure", 0, 1, 0.05, "×", 2, ["Short", "Long"]);
+    C.Muted(Motion, "Reconstructs the shutter from this frame and the last, with depth-rejected history. It is a post pass, "
+                  + "not a composite inside the antialiasing: inside, the temporal history would erase it every frame.");
+
+    const Attribution = C.Card(Body, "Attribution · removes the stage", "Bug",
+                               { Accent: Accent.Effects, Index: 5, Subtitle: "These CHANGE the image — for cost, not for quality" });
+    for (const [Caption, Key] of AttributionStages)
+        C.Switch(Attribution, S.StageOmit, Key, { Label: Caption });
+    C.Muted(Attribution, "Each switch here deletes a stage from the frame, so the picture changes. Use them to find out what a "
+                       + "stage costs at most; never to conclude a change was free.");
 }
 
 //------------------------------------------------------------------------------------------------------------------------

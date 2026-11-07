@@ -24,12 +24,18 @@ export class DisplayProjection
              "StorageTexture2D:rgba16float"], Compute, "Display recombination");
         this.AntialiasLayout = this.Exchange.ConstructDescriptorLayout(
             ["Uniform", "Texture2D", "Texture2D", "Texture2D", "Sampler", "StorageTexture2D:rgba16float"], Compute, "Display antialias");
+        // 📝 Motion blur reads the resolved colour, the prior resolved colour, the surface motion and depth, and writes its
+        //    own target; the exposure then reads that target on the frames the component is on.
+        this.BlurLayout = this.Exchange.ConstructDescriptorLayout(
+            ["Uniform", "Texture2D", "Texture2D", "Texture2D", "TextureDepth2D", "Sampler", "StorageTexture2D:rgba16float"],
+            Compute, "Motion blur");
         this.ExposureLayout = this.Exchange.ConstructDescriptorLayout(["Uniform", "Texture2D", "Storage"], Compute, "Display exposure");
         this.InspectionLayout = this.Exchange.ConstructDescriptorLayout(["Uniform", "StorageTexture2D:rgba16float"], Compute, "Inspection march");
         this.PresentLayout = this.Exchange.ConstructDescriptorLayout(["Uniform", "Texture2D", "StorageRead"],
                                                                      GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, "Display present");
         this.RecombineProgram  = await this.Shaders.ConstructComputeProgram("DisplayRecombination.wgsl", "ResolveRecombination", [this.RecombineLayout]);
         this.AntialiasProgram  = await this.Shaders.ConstructComputeProgram("DisplayAntialias.wgsl", "IntegrateAntialias", [this.AntialiasLayout]);
+        this.BlurProgram       = await this.Shaders.ConstructComputeProgram("MotionBlur.wgsl", "ResolveMotionBlur", [this.BlurLayout]);
         this.ExposureProgram   = await this.Shaders.ConstructComputeProgram("DisplayExposure.wgsl", "IntegrateExposure", [this.ExposureLayout]);
         this.InspectionProgram = await this.Shaders.ConstructComputeProgram("InspectionMarch.wgsl", "MarchInspection",
                                                                             [this.InspectionLayout, DistanceLayout, SamplingLayout]);
@@ -58,12 +64,16 @@ export class DisplayProjection
         // 📝 Diffuse exitance per pixel, never an inspection signal: the next frame's screen traces read it. Written only
         //    while the traces are on; the slot still exists while off, because the bind group must bind every entry.
         const Exitance   = Construct("Diffuse exitance");
-        this.Textures = [Recombined, Inspection, ...Resolved, Post, Exitance];
+        // 📝 Motion blur's own target, written after the temporal antialiasing and read by the exposure on the frames the
+        //    camera component is on. It carries a copy source so the A/B harness can diff it.
+        const Blurred    = Construct("Blurred radiance", GPUTextureUsage.COPY_SRC);
+        this.Textures = [Recombined, Inspection, ...Resolved, Post, Exitance, Blurred];
         this.ResolvedTextures = Resolved;
         this.PostTexture = Post;
+        this.BlurTexture = Blurred;
         this.ScreenExtent = ScreenExtent;
         this.Views = { Recombined: Recombined.createView(), Inspection: Inspection.createView(), Resolved: Resolved.map((Texture) => Texture.createView()),
-                       Post: Post.createView(), Exitance: Exitance.createView() };
+                       Post: Post.createView(), Exitance: Exitance.createView(), Blurred: Blurred.createView() };
         if (!this.EmptySmoke) this.EmptySmoke = this.Exchange.ConstructTexture({ label: "Idle plume", size: [1,1], format: "rgba16float", usage: GPUTextureUsage.TEXTURE_BINDING });
         this.RecombineResources = [this.FrameRecords, this.MaterialRecords, Surface.Views.Attributes, Surface.Views.Depth, Surface.Views.Direct, Diffuse.Views.Screen,
              Glossy.Views.Screen, Resampling.Views.Irradiance, this.Views.Inspection, Cards.Views.Final, this.Views.Recombined, this.OccupantRecords, this.EmptySmoke.createView(), this.LinearClamp,
@@ -71,10 +81,19 @@ export class DisplayProjection
         this.AssignSmoke(this.EmptySmoke.createView());
         this.AntialiasGroups = [0, 1].map((Parity) => this.Exchange.ConstructDescriptorGroup(this.AntialiasLayout,
             [this.FrameRecords, this.Views.Recombined, this.Views.Resolved[1 - Parity], Surface.Views.Motion, this.LinearClamp, this.Views.Resolved[Parity]]));
+        // 📝 The blur reads this frame's resolve and writes its own target; the prior resolve is the other parity's, so the
+        //    trail a tap reconstructs comes from a frame the current resolve has not overwritten.
+        this.BlurGroups = [0, 1].map((Parity) => this.Exchange.ConstructDescriptorGroup(this.BlurLayout,
+            [this.FrameRecords, this.Views.Resolved[Parity], this.Views.Resolved[1 - Parity], Surface.Views.Motion, Surface.Views.Depth,
+             this.LinearClamp, this.Views.Blurred]));
         this.ExposureGroups = [0, 1].map((Parity) => this.Exchange.ConstructDescriptorGroup(this.ExposureLayout,
             [this.FrameRecords, this.Views.Resolved[Parity], this.AdaptationRecords]));
         this.PresentGroups = [0, 1].map((Parity) => this.Exchange.ConstructDescriptorGroup(this.PresentLayout,
             [this.FrameRecords, this.Views.Resolved[Parity], this.AdaptationRecords]));
+        this.BlurExposureGroups = [0, 1].map((Parity) => this.Exchange.ConstructDescriptorGroup(this.ExposureLayout,
+            [this.FrameRecords, this.Views.Blurred, this.AdaptationRecords]));
+        this.BlurPresentGroups = [0, 1].map((Parity) => this.Exchange.ConstructDescriptorGroup(this.PresentLayout,
+            [this.FrameRecords, this.Views.Blurred, this.AdaptationRecords]));
         this.InspectionGroup = this.Exchange.ConstructDescriptorGroup(this.InspectionLayout, [this.FrameRecords, this.Views.Inspection]);
         this.PostGroups = {
             Exposure: this.Exchange.ConstructDescriptorGroup(this.ExposureLayout, [this.FrameRecords, this.Views.Post, this.AdaptationRecords]),
@@ -82,6 +101,13 @@ export class DisplayProjection
         };
         this.ComposedGroups = null;
         this.ComposedTexture = null;
+    }
+
+    // 📝 Whether the camera's motion-blur component is on for this frame. The pass and the downstream rebinding are both
+    //    driven from this single flag, so the toggle cannot leave the exposure reading a stale target.
+    AssignBlur(Enabled)
+    {
+        this.BlurEnabled = !!Enabled;
     }
 
     AssignSmoke(View) {
@@ -135,15 +161,38 @@ export class DisplayProjection
         Pass.dispatchWorkgroups(Math.ceil(Width / 8), Math.ceil(Height / 8));
         this.Composed = false;
         this.Posted = false;
-        if ((Composer && this.ComposedGroups) || PostOverlay)
+        this.BlurApplied = false;
+        // 📝 Camera motion blur is a post pass on the resolved colour, never a composite inside the antialiasing: it needs
+        //    both this frame and the previous one to reconstruct a shutter, and the temporal history would erase anything
+        //    blended inside it. Downstream stages read the blurred target on the frames it runs.
+        const Blur = !!this.BlurEnabled;
+        if (Blur || (Composer && this.ComposedGroups) || PostOverlay)
         {
             Pass.end();
+            if (Blur)
+            {
+                this.BlurApplied = true;
+                const BlurPass = Encoder.beginComputePass({ label: "Motion blur" });
+                BlurPass.setPipeline(this.BlurProgram);
+                BlurPass.setBindGroup(0, this.BlurGroups[Parity]);
+                BlurPass.dispatchWorkgroups(Math.ceil(Width / 8), Math.ceil(Height / 8));
+                BlurPass.end();
+            }
             if (Composer && this.ComposedGroups)
                 this.Composed = Composer(Encoder, Parity);
-            let Groups = this.Composed ? this.ComposedGroups : { Exposure: this.ExposureGroups[Parity], Present: this.PresentGroups[Parity] };
+            // 📝 Precedence: a composer's target wins, else the blurred target, else the resolve — and the post overlay
+            //    below supersedes all three by taking the whole result into Post.
+            let Groups;
+            if (this.Composed && this.ComposedGroups)
+                Groups = this.ComposedGroups;
+            else if (Blur)
+                Groups = { Exposure: this.BlurExposureGroups[Parity], Present: this.BlurPresentGroups[Parity] };
+            else
+                Groups = { Exposure: this.ExposureGroups[Parity], Present: this.PresentGroups[Parity] };
             if (PostOverlay)
             {
-                const Source = this.Composed && this.ComposedTexture ? this.ComposedTexture : this.ResolvedTextures[Parity];
+                const Source = this.Composed && this.ComposedTexture ? this.ComposedTexture
+                             : Blur ? this.BlurTexture : this.ResolvedTextures[Parity];
                 Encoder.copyTextureToTexture({ texture: Source }, { texture: this.PostTexture }, [Width, Height]);
                 PostOverlay(Encoder, this.Views.Post);
                 this.Posted = true;

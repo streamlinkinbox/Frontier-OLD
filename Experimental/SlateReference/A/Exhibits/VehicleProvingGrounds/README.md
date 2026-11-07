@@ -32,6 +32,57 @@ The Frame timing card has a **Copy timing log** button: one text block with qual
 extents, every cost-relevant toggle and every pass duration including the zeroes, for
 pasting into a stays/goes review. The console always gets the log too.
 
+## Camera motion blur
+
+**Vehicle → Camera → Camera components** (also in the Performance lab) attaches a
+camera-owned motion-blur component. It is a **separate post pass** after the temporal
+antialiasing (`Shader/MotionBlur.wgsl`), not a composite inside it.
+
+That distinction is the whole feature. An earlier version gathered five taps of the
+current frame and mixed them into the TAA result; inside the resolve the 90 % history
+weight erases it, and mixing a sharp copy back in dilutes what is left, so toggling the
+component changed nothing visible. The pass now:
+
+- reconstructs the **shutter** from *both* this frame and the previous one, so it can
+  streak rather than smear — the half of a streak that matters is geometry the camera
+  uncovered during the exposure, which only the prior frame still holds;
+- uses 12 stratified taps under an overlapping cubic B-spline window, rotated per pixel,
+  so neighbouring pixels land between each other's samples and the result resolves as a
+  gradient instead of as a row of copies;
+- rejects history by depth, so a disocclusion cannot drag the background across the
+  foreground;
+- **shortens the exposure** for lower strength rather than blending the sharp image back
+  in, and leaves pixels below 0.75 px of motion untouched.
+
+It runs only for the final image (a debug view would have its signal smeared) and only
+while the component is enabled.
+
+## Performance lab
+
+**Render → Performance lab** is a separate inspector page, and it deliberately separates
+two kinds of switch that must never be read as equivalent:
+
+- **Optimisations · image-identical** — on by default, off to measure what they save.
+  *Reuse static shadow cascades* skips a cascade's raster when neither its snapped light
+  matrix nor any caster's transform moved, loading rather than clearing the depth so the
+  skip cannot erase it. *Stage the wavelet tile* keeps the denoiser's 5×5 taps but stages
+  the guide and signal in shared memory once per workgroup instead of re-reading them up
+  to 25 times per pixel. Both compute the same pixels — same taps, same weights, same
+  matrices, same order — which is what makes their frame-time delta real.
+- **Attribution · removes the stage** — these **change the image**. They delete a stage
+  from the frame to show what it costs at most; they can never show that a change was free.
+
+**Hold the scene** freezes the car, the camera and the solver clock
+(`?holdscene`, or the switch). Compare two settings only while held: on a moving car the
+frame-to-frame difference is larger than any optimisation, and the comparison measures
+nothing.
+
+Query switches: `?cascadereuse=0`, `?wavelettile=0` start with an optimisation off, for
+a reproducible A/B.
+
+Tests: `npm test` (74 node tests) and `npm run validate:motionblur`,
+`validate:cascades`, `validate:performance` for the headless harness.
+
 ## Added Garage functionality
 
 The cockpit/dashboard, steering wheel, integrated hexagonal cluster and centre tablet

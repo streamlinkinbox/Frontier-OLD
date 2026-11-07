@@ -5,6 +5,10 @@
 
 // 📝 Instantiated twice — once for the ReSTIR irradiance, once for the glossy reflection — with its own history and
 //    settings. The first wavelet iteration's output is the history the next frame integrates against (SVGF feedback).
+// 📝 The largest step whose dense workgroup tile still fits the 16 KiB budget; must match MaximumStagedStep in
+//    VarianceWavelet.wgsl, which sizes the tile.
+const StagedStepLimit = 3;
+
 export class VarianceIntegrator
 {
     // 📝 Settings: MinimumWeight, TallyLimit, WaveletIterations (0–4), ColourSigma.
@@ -28,7 +32,12 @@ export class VarianceIntegrator
         this.ProjectionLayout = this.Exchange.ConstructDescriptorLayout(
             ["Uniform", "Texture2D", "Texture2D", "Texture2D", "TextureDepth2D", "StorageTexture2D:rgba16float"], Compute, `${this.Label} projection`);
         this.TemporalProgram   = await this.Shaders.ConstructComputeProgram("VarianceTemporal.wgsl", "IntegrateTemporal", [this.TemporalLayout]);
+        // 📝 Two entry points into the same kernel: the staged one stages a dense workgroup tile for the small steps, the
+        //    direct one walks the neighbourhood in global memory for steps too large to stage. The arithmetic is shared,
+        //    so switching between them cannot change the image — only how many times each texel is fetched.
         this.WaveletProgram    = await this.Shaders.ConstructComputeProgram("VarianceWavelet.wgsl", "ConvolveWavelet", [this.WaveletLayout]);
+        this.PrepareProgram    = await this.Shaders.ConstructComputeProgram("VarianceWavelet.wgsl", "PrepareTileWavelet", [this.WaveletLayout]);
+        this.DirectProgram     = await this.Shaders.ConstructComputeProgram("VarianceWavelet.wgsl", "ConvolveWaveletDirect", [this.WaveletLayout]);
         this.ProjectionProgram = await this.Shaders.ConstructComputeProgram("VarianceUpsample.wgsl", "ProjectScreenSignal", [this.ProjectionLayout]);
         this.StepRecords = [];
         for (let Iteration = 0; Iteration < 5; ++Iteration)
@@ -108,10 +117,17 @@ export class VarianceIntegrator
             Pass.setBindGroup(0, this.TemporalGroups[Parity]);
             Pass.dispatchWorkgroups(Math.ceil(TraceWidth / 8), Math.ceil(TraceHeight / 8));
             const Iterations = Math.max(1, Math.min(4, this.Settings.WaveletIterations + 1));
-            Pass.setPipeline(this.WaveletProgram);
+            const Step = (Iteration) => 1 << Math.max(0, Iteration - 1);
             for (let Iteration = 0; Iteration < Iterations; ++Iteration)
             {
-                Pass.setBindGroup(0, this.WaveletGroups[Parity][Iteration].Group);
+                const Group = this.WaveletGroups[Parity][Iteration].Group;
+                Pass.setBindGroup(0, Group);
+                // 📝 A dense tile only fits the workgroup budget at the small steps; larger ones take the direct path, so
+                //    the staged pass runs exactly when the kernel it feeds will actually read the tile it stages.
+                if (this.SharedTileEnabled !== false && Step(Iteration) <= StagedStepLimit)
+                    Pass.setPipeline(this.PrepareProgram);
+                else
+                    Pass.setPipeline(this.DirectProgram);
                 Pass.dispatchWorkgroups(Math.ceil(TraceWidth / 8), Math.ceil(TraceHeight / 8));
             }
             Projection = Iterations === 1 ? 1 : 2 + ((Iterations - 2) & 1);

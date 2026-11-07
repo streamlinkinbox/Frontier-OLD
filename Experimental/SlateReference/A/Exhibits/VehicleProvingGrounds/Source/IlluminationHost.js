@@ -64,7 +64,7 @@ const ShaderSources = [
     "AtmosphereScattering.wgsl", "SurfaceReflectance.wgsl", "ShadowRaster.wgsl", "SurfaceRaster.wgsl", "DirectRadiance.wgsl",
     "ReservoirRecords.wgsl", "ReservoirTemporal.wgsl", "ReservoirSpatial.wgsl", "ReflectionTraversal.wgsl", "RayTraversal.wgsl", "VarianceTemporal.wgsl",
     "VarianceWavelet.wgsl", "VarianceUpsample.wgsl", "InspectionMarch.wgsl", "DisplayRecombination.wgsl", "DisplayAntialias.wgsl",
-    "DisplayExposure.wgsl", "DisplayPresent.wgsl", "FireIllumination.wgsl", "PlumeRecords.wgsl", "PlumeAdvection.wgsl", "PlumePressure.wgsl", "PlumeVorticity.wgsl", "PlumeMarch.wgsl",
+    "DisplayExposure.wgsl", "DisplayPresent.wgsl", "MotionBlur.wgsl", "FireIllumination.wgsl", "PlumeRecords.wgsl", "PlumeAdvection.wgsl", "PlumePressure.wgsl", "PlumeVorticity.wgsl", "PlumeMarch.wgsl",
     "FragmentDistance.wgsl", "EffectRecords.wgsl", "EffectRaster.wgsl", "VehicleVisual.wgsl", "SparkRaster.wgsl", "ForwardRaster.wgsl",
     "CabinOverlay.wgsl", "CabinVolume.wgsl", "ClusteredLights.wgsl", "ScreenTraversal.wgsl", "NearestDepthTransfer.wgsl",
     "NearestDepthReduction.wgsl"
@@ -114,6 +114,15 @@ class IlluminationHost
             Gas: ConstructGasParameters(),
             SunElevation: 38.0, SunAzimuth: 145.0, SolarIlluminance: 12.0, SkyScale: 1.0, EmissionScale: 1.0,
             ExposureCompensation: 0.0, AutoExposure: true, DirectShadow: true,
+            // 📝 Optimisation toggles, all default on: each is image-identical when it holds, so they exist to be switched
+            //    off in the performance panel when someone wants to measure the cost they remove.
+            ShadowCascadeReuse: Query.get("cascadereuse") !== "0", SharedWaveletTile: Query.get("wavelettile") !== "0",
+            // 📝 The performance panel holds the scene still so two settings can be compared in the same frame.
+            HoldScene: Query.has("holdscene"),
+            // 📝 Attribution toggles, one per stage. These change the image — they remove a stage — so they exist to show
+            //    what a stage costs, never to claim a win. The optimisations above are the ones that must stay identical.
+            StageOmit: { Union: false, Cards: false, Shadow: false, Surface: false, Direct: false, Resampling: false,
+                         Diffuse: false, Reflection: false, Glossy: false, Smoke: false, Cabin: false, Sparks: false },
             Indirect: true, ScreenTraversal: Query.has("screentraces"), TemporalReuse: true, SpatialReuse: true, VisibilityReuse: true,
             RadianceRefresh: true,
             SpatialCount: 5, SpatialRadius: 20, TemporalTallyLimit: 20, IndirectScale: 1.0, VarianceKernel: true, Reflection: true,
@@ -1044,6 +1053,9 @@ class IlluminationHost
         if (this.Settings.Inspection === 0)
             Features |= Math.round(this.CameraEntity.Components.MotionBlur.ResolveStrength() * 255.0) << 16;
         Integers[103] = Features;
+        // 📝 Retained for the diagnostics panel and the harness: the feature word that was actually encoded this frame,
+        //    so a test can read what the shader will see rather than re-deriving it from the settings it just set.
+        this.FrameFeatures = Features;
         Integers[104] = this.Settings.Inspection;
         Scalars[105] = this.Settings.TemporalTallyLimit;
         Scalars[106] = this.Settings.SpatialRadius;
@@ -1098,7 +1110,9 @@ class IlluminationHost
         // 📝 Derezzing with momentum: the car carries on under the solver with nobody at the controls.
         if (this.Vehicle.Coasting)
             Command = { Throttle: 0.0, Brake: 0.0, Steer: 0.0, Handbrake: false };
-        const Step = this.FixedStep ? this.FixedStep : Δτ;
+        // 📝 Hold freezes the simulation clock so the camera and the car stop moving. Two settings can then be compared
+        //    against the same view; without it a driving car makes every A/B difference indistinguishable from noise.
+        const Step = this.Settings.HoldScene ? 0.0 : (this.FixedStep ? this.FixedStep : Δτ);
         this.Vehicle.AssignAssists({ LineLock: this.Settings.LineLock });
         this.Recovery.Advance(Step);
         this.Fracture.ResolveImpacts(this.Vehicle, Step);
@@ -1185,14 +1199,20 @@ class IlluminationHost
         if (this.Scene.ConstructDistanceList())
             this.Distance.UploadDistanceList(this.Scene.DistanceList);
         this.Distance.ScheduleInvalidation(this.Focus, ResolveMovedBounds(this.Scene, this.Distance.Frozen));
+        // 📝 The denoisers share one optimisation flag: staged workgroup tile when on, the direct path when off.
+        if (this.Diffuse) this.Diffuse.SharedTileEnabled = !!this.Settings.SharedWaveletTile;
+        if (this.Glossy) this.Glossy.SharedTileEnabled = !!this.Settings.SharedWaveletTile;
         this.Cards.ScheduleTiles(this.Settings.CardTileBudget);
+        // 📝 The cascade reuse test needs the casters' transforms, which PositionVehicle() has just written.
+        this.Shadow.SetCasterKey(this.Scene);
         this.Shadow.ResolveCascades(Camera, Light.Direction);
         const CpuSceneUpdateMs = performance.now() - CpuUpdateStart;
 
         // ④ record
         const CpuCommandStart = performance.now();
         const Encoder = Device.createCommandEncoder({ label: `Frame ${this.FrameIndex}` });
-        const Included = (Name) => !this.Omitted.has(Name);
+        // 📝 A stage is left out when either the URL asked for it (?omit=...) or the performance panel switched it off.
+        const Included = (Name) => !this.Omitted.has(Name) && !this.Settings.StageOmit[Name];
         this.Atmosphere.RecordSkyView(Encoder, this.Settings.SolarIlluminance);
         // 📝 Fragments born this frame get their distance volumes before the union reads them.
         this.Volumes.RecordFragments(Encoder);
@@ -1200,7 +1220,14 @@ class IlluminationHost
             this.Distance.RecordUnion(Encoder, this.Scene.QueryUnionCount(), this.FrameIndex, this.Metrics.QueryWrites("Distance union"));
         if (Included("Smoke"))
             this.Smoke.RecordTransport(Encoder, this.Distance.TraversalGroup, this.Metrics.QueryWrites("Smoke transport"));
-        if (Included("Shadow"))
+        // 📝 Three cascades are rasterised because the smoke march and the cabin overlay read them, and because the sun's
+        //    direct term samples them. When sun shadows are off *and* neither of those readers is live, nothing can
+        //    observe the depth, so the raster is skipped — the image is identical either way.
+        const CascadesObserved = this.Settings.DirectShadow
+                              || (Included("Smoke") && this.Smoke.Resident && this.Settings.SmokeEnabled)
+                              || (Included("Cabin") && this.Settings.Inspection === 0);
+        this.Shadow.Reuse = !!this.Settings.ShadowCascadeReuse;
+        if (Included("Shadow") && CascadesObserved)
             this.Shadow.RecordCascades(Encoder, this.Scene, this.VertexRecords, this.Metrics.QueryWrites("Shadow"));
         if (Included("Cards"))
             this.Cards.RecordLighting(Encoder, this.Distance.TraversalGroup, this.SamplingGroup, this.Settings.CardRadiosity,
@@ -1241,6 +1268,10 @@ class IlluminationHost
                           ? (Target, View) => this.Cabin.RecordOverlay(Target, View, this.Surface.Views.Depth) : null;
             const PostOverlay = this.Sparks.Live > 0 && this.Settings.Inspection === 0 && Included("Sparks")
                               ? (Target, View) => this.Sparks.Record(Target, View, this.Surface.Views.Depth) : null;
+            // 📝 The camera component's motion blur runs only on the final image: an inspection selector that swaps the
+            //    whole viewport would otherwise have its diagnostic signal smeared.
+            this.Display.AssignBlur(this.Settings.Inspection === 0 && this.CameraEntity.Components.MotionBlur.Enabled
+                                    && this.CameraEntity.Components.MotionBlur.ResolveStrength() > 0.0 && Included("Blur"));
             this.Display.RecordResolve(Encoder, Parity, this.Metrics.QueryWrites("Resolve"), Composer, Overlay, PostOverlay);
         }
         let CaptureReady = false;

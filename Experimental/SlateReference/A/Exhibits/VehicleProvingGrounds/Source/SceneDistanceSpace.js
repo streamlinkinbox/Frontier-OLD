@@ -32,6 +32,8 @@ export class SceneDistanceSpace
         this.TotalBricks   = 0;
         this.Frozen        = false;
         this.PendingBounds = [];
+        // 📝 Grown on demand and reused, so the union's per-frame upload stops allocating a fresh typed array every frame.
+        this.BrickScratch  = new Int32Array(0);
     }
 
     // 📝 Bounds of occupants that appeared or vanished outside the moving-occupant path (stress objects enabled or
@@ -203,7 +205,11 @@ export class SceneDistanceSpace
         const BrickCount = this.FrameBricks.length / 4;
         if (BrickCount === 0)
             return;
-        Device.queue.writeBuffer(this.BrickRecords, 0, new Int32Array(this.FrameBricks));
+        // 📝 Same bytes and the same offsets as the array literal this replaces; only the allocation is gone.
+        if (this.BrickScratch.length < this.FrameBricks.length)
+            this.BrickScratch = new Int32Array(this.FrameBricks.length);
+        this.BrickScratch.set(this.FrameBricks);
+        Device.queue.writeBuffer(this.BrickRecords, 0, this.BrickScratch, 0, this.FrameBricks.length);
         const Pass = Encoder.beginComputePass({ label: "Scene distance union", timestampWrites: TimestampWrites });
         Pass.setPipeline(this.UnionProgram);
         Pass.setBindGroup(0, this.UnionGroup);
