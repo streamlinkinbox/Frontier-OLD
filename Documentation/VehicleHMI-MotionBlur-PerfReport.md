@@ -1,9 +1,12 @@
 # VehicleHMI — Motion Blur Fix & Performance Optimization Report
-### Branch `arena/38ffdb11-frontier` · based on `arena/8ff1f043-frontier` (commit 78d573a) · Date 2026-11-07
+### Branch `arena/38ffdb11-frontier` · based on `arena/8ff1f043-frontier` (commit 78d573a) + Perf Lab (5ed0fca) · Date 2026-11-08
 
 > You asked for: (a) clone/inspect `arena/8ff1f043-frontier` which runs ray-traced BVH full GI, (b) fix the VehicleHMI motion-blur so it actually shows, (c) a report of *real* optimizations that do **not** reduce quality (no resolution/bounce knobs), and (d) which of those can be exposed as toggles in a separate debug panel for the HTML/WebGPU VehicleHMI demo so you can A/B FPS.
 >
 > This doc is that report. The motion-blur fix from `8ff1f043` has been ported to this branch; all other `8ff1f043` performance instrumentation (shareable JSON, fast profile) is also ported because it is what you need to *measure* the toggles. Native Vulkan code is untouched — this is a WebGPU demo concern.
+> **Update 2026-11-08 (5ed0fca): the separate Perf Lab debug panel is now implemented — see §5.**
+
+
 
 ---
 
@@ -193,6 +196,7 @@ Quality fixes that are *not* perf optimizations but are worth turning on for RTX
 ## 8) Files on this branch
 
 - **Motion blur:** `Experimental/SlateReference/A/Exhibits/VehicleProvingGrounds/Shader/DisplayAntialias.wgsl` (fix), `Source/CameraMotionBlur.js` (new), `Source/InspectorPages.js` (Camera entity), `Source/IlluminationHost.js` (Feature bit 16–23, perf counters), `Source/HardwareMetrics.js` / `Source/TimingLog.js` (shareable JSON), `Style/InspectorReference.css`, `Tools/CameraMotionBlur.test.mjs`, `index.html`, `README.md`.
+- **Perf Lab panel (new 5ed0fca):** `Source/IlluminationHost.js` — `PerfToggles` + `PerfCounters` + gated `UpdateTlas`/`ResolveCascades` (TLAS reuse, cascade cache, fog cull); `Source/InspectorPages.js` — entity `perfLab` (Debug group) + `BuildPerfLab()` cards (real optimizations, stub future, live counters + reset/all-off/recommended-on); toggles+captures in `vehiclehmi_perf_v1` JSON.
 - **Report you’re reading:** `Documentation/VehicleHMI-MotionBlur-PerfReport.md` (this file).
 - **Tests:** `npm test` in the exhibit — 67 tests including `CameraMotionBlur.test.mjs` ordering assertion.
 
