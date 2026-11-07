@@ -40,7 +40,9 @@ fn ResolveCameraMotionBlur(Pixel: vec2i, MotionPixels: vec2f, Strength: f32) -> 
     let Centre = textureLoad(RecombinedRadiance, Pixel, 0).rgb;
     let Speed = length(MotionPixels);
     if (Strength <= 0.0 || Speed < 0.75 || Frame.InspectionMode != 0u)
+    {
         return Centre;
+    }
     let ClampedMotion = MotionPixels * min(1.0, 24.0 / Speed) * Strength;
     let CentreUv = (vec2f(Pixel) + 0.5) * Frame.InverseScreenExtent;
     var Sum = vec3f(0.0);
