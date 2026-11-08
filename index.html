@@ -3,26 +3,305 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>FRONTIER — Playable Levels</title>
+<title>FRONTIER — Level Select</title>
 <style>
-  body{margin:0;min-height:100vh;display:grid;place-items:center;background:#04140b;color:#fff;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-  .card{max-width:560px;margin:20px;background:rgba(16,22,18,.92);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:34px}
-  .logo{display:inline-block;background:#fff;color:#1f5eff;font-weight:800;font-size:12px;letter-spacing:.16em;padding:7px 14px;border-radius:999px}
-  h1{font-size:34px;line-height:1.05;margin:16px 0 8px} h1 em{font-style:normal;color:#37e08b}
-  p{color:#a7b3ab;line-height:1.55}
-  a.btn{display:inline-block;margin-top:14px;background:#0f9d5c;color:#fff;text-decoration:none;font-weight:800;letter-spacing:.08em;padding:14px 28px;border-radius:999px}
-  a.doc{color:#8dff57}
+  :root{
+    --blue:#1f5eff; --bio:#37e08b; --bio2:#8dff57;
+    --ink:#04120a; --panel:rgba(14,26,20,.92); --panel2:rgba(22,34,28,.9);
+    --stroke:rgba(255,255,255,.1); --stroke2:rgba(255,255,255,.22);
+    --dim:#9db0a6; --faint:#6d8078;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    min-height:100vh;background:var(--ink);color:#fff;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    background-image:
+      radial-gradient(1200px 700px at 15% -10%, rgba(55,224,139,.16), transparent 60%),
+      radial-gradient(900px 600px at 95% 0%, rgba(31,94,255,.20), transparent 55%),
+      linear-gradient(180deg,#04120a 0%,#050d09 100%);
+    background-attachment:fixed;
+  }
+  /* faint canopy silhouette so the hub feels like the same world */
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.5;
+    background:
+      radial-gradient(320px 220px at 82% 8%, rgba(23,107,52,.55), transparent 70%),
+      radial-gradient(260px 180px at 8% 22%, rgba(23,107,52,.45), transparent 70%),
+      radial-gradient(380px 240px at 55% 96%, rgba(23,107,52,.35), transparent 70%);
+  }
+  .shell{position:relative;z-index:1;max-width:1220px;margin:0 auto;padding:34px 24px 70px}
+
+  /* ---------------- header ---------------- */
+  header{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:40px}
+  .logo{background:#fff;color:var(--blue);font-weight:900;font-size:12px;letter-spacing:.18em;padding:8px 15px;border-radius:999px}
+  .tag{font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:var(--bio2);border:1px solid rgba(141,255,87,.35);border-radius:999px;padding:6px 11px}
+  .tag.grey{color:var(--faint);border-color:var(--stroke)}
+  .header-right{margin-left:auto;display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--faint)}
+  .dot-live{width:7px;height:7px;border-radius:50%;background:var(--bio);box-shadow:0 0 0 0 rgba(55,224,139,.7);animation:pulse 2.4s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(55,224,139,.55)}70%{box-shadow:0 0 0 9px rgba(55,224,139,0)}100%{box-shadow:0 0 0 0 rgba(55,224,139,0)}}
+
+  /* ---------------- hero ---------------- */
+  .hero{margin-bottom:34px}
+  .hero h1{font-size:clamp(30px,4.6vw,52px);line-height:1.02;letter-spacing:-.02em;font-weight:900}
+  .hero h1 em{font-style:normal;color:var(--bio2)}
+  .hero p{color:var(--dim);max-width:680px;margin-top:14px;line-height:1.6;font-size:15px}
+  .hero p b{color:#fff}
+
+  /* ---------------- roster ---------------- */
+  .roster-head{display:flex;align-items:baseline;gap:12px;margin:0 0 16px}
+  .roster-head h2{font-family:var(--mono);font-size:11px;letter-spacing:.24em;color:var(--bio2)}
+  .roster-head span{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--faint)}
+
+  .grid{display:grid;grid-template-columns:1.35fr 1fr 1fr;gap:16px;align-items:stretch}
+  @media(max-width:960px){.grid{grid-template-columns:1fr 1fr}}
+  @media(max-width:680px){.grid{grid-template-columns:1fr}}
+
+  .card{
+    position:relative;display:flex;flex-direction:column;overflow:hidden;
+    background:var(--panel);border:1px solid var(--stroke);border-radius:20px;
+    transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease;
+  }
+  a.card{text-decoration:none;color:inherit;cursor:pointer}
+  a.card:hover,a.card:focus-visible{transform:translateY(-4px);border-color:var(--accent,#37e08b);box-shadow:0 22px 50px -12px rgba(0,0,0,.8),0 0 0 1px var(--accent,#37e08b) inset;outline:none}
+  a.card:hover .thumb img{transform:scale(1.045)}
+  a.card:focus-visible{box-shadow:0 0 0 3px rgba(55,224,139,.5)}
+
+  .thumb{position:relative;aspect-ratio:16/9;overflow:hidden;background:#07130c;flex:none}
+  .thumb img{width:100%;height:100%;object-fit:cover;object-position:50% 58%;display:block;transition:transform .5s ease;filter:saturate(1.02)}
+  .thumb::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(4,18,10,.05) 40%,rgba(4,18,10,.95) 100%)}
+  .thumb .code{
+    position:absolute;top:12px;left:12px;z-index:2;
+    font-family:var(--mono);font-weight:800;font-size:11px;letter-spacing:.16em;
+    background:rgba(4,18,10,.78);border:1px solid var(--stroke2);color:#fff;
+    border-radius:999px;padding:6px 12px;backdrop-filter:blur(6px);
+  }
+  .thumb .state{
+    position:absolute;top:12px;right:12px;z-index:2;display:flex;align-items:center;gap:6px;
+    font-family:var(--mono);font-size:9.5px;font-weight:800;letter-spacing:.16em;
+    border-radius:999px;padding:6px 11px;backdrop-filter:blur(6px);
+  }
+  .state.play{background:rgba(15,157,92,.22);border:1px solid rgba(55,224,139,.55);color:var(--bio2)}
+  .state.locked{background:rgba(4,18,10,.75);border:1px dashed var(--stroke2);color:var(--faint)}
+  .state .pip{width:6px;height:6px;border-radius:50%;background:currentColor}
+
+  .body{padding:18px 20px 20px;display:flex;flex-direction:column;gap:10px;flex:1}
+  .body h3{font-size:20px;line-height:1.15;letter-spacing:-.01em}
+  .body h3 small{display:block;font-size:11px;font-family:var(--mono);letter-spacing:.14em;color:var(--faint);margin-top:6px;font-weight:600}
+  .tagline{font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--accent,var(--bio))}
+  .blurb{color:var(--dim);font-size:13px;line-height:1.55}
+  .hazards{display:flex;flex-wrap:wrap;gap:5px;margin-top:2px}
+  .hazards span{font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:#b9c9c0;background:rgba(255,255,255,.05);border:1px solid var(--stroke);border-radius:5px;padding:3px 6px}
+  .facts{margin-top:auto;border-top:1px solid var(--stroke);padding-top:12px;display:grid;gap:5px}
+  .fact{display:flex;justify-content:space-between;gap:10px;font-family:var(--mono);font-size:10px;letter-spacing:.06em}
+  .fact b{color:var(--faint);font-weight:600}
+  .fact span{color:#dfe9e3;text-align:right}
+
+  /* footer of a playable card: best time + CTA */
+  .record{display:flex;align-items:center;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--stroke)}
+  .record .medal{font-size:22px;line-height:1;filter:drop-shadow(0 0 10px rgba(255,210,77,.35))}
+  .record .r-lab{font-family:var(--mono);font-size:9px;letter-spacing:.16em;color:var(--faint)}
+  .record .r-time{font-family:var(--mono);font-size:15px;font-weight:800;color:#fff}
+  .record .go{margin-left:auto;display:flex;align-items:center;gap:8px;background:#0f9d5c;color:#fff;font-weight:800;font-size:11px;letter-spacing:.14em;padding:11px 16px;border-radius:999px;box-shadow:0 8px 24px rgba(55,224,139,.28)}
+  a.card:hover .go{background:var(--accent,#37e08b);color:#04120a}
+  .locked-cta{margin-left:auto;font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;color:var(--faint);border:1px dashed var(--stroke2);padding:9px 12px;border-radius:999px}
+  .card.locked{opacity:.72}
+  .card.locked .thumb{filter:none;background:#08150e}
+  .blueprint{position:absolute;inset:0;display:grid;place-items:center;overflow:hidden}
+  .blueprint::before{
+    content:"";position:absolute;inset:0;opacity:.5;
+    background-image:linear-gradient(rgba(55,224,139,.13) 1px,transparent 1px),
+                     linear-gradient(90deg,rgba(55,224,139,.13) 1px,transparent 1px);
+    background-size:26px 26px;
+  }
+  .blueprint::after{
+    content:"";position:absolute;left:50%;top:50%;width:62%;aspect-ratio:1;
+    transform:translate(-50%,-50%);border:1px dashed rgba(55,224,139,.35);border-radius:50%;
+    box-shadow:0 0 0 22px rgba(55,224,139,.045),0 0 0 46px rgba(55,224,139,.03);
+  }
+  .blueprint .ph{position:relative;z-index:1;text-align:center;font-family:var(--mono)}
+  .blueprint .ph .big{font-size:30px;font-weight:800;color:rgba(141,255,87,.55);letter-spacing:.1em}
+  .blueprint .ph .small{font-size:9px;letter-spacing:.22em;color:var(--faint);margin-top:8px}
+  .card.locked .thumb::after{background:linear-gradient(180deg,rgba(8,21,14,.15) 30%,rgba(8,21,14,.92) 100%)}
+  .card.locked:hover{transform:none;border-color:var(--stroke);box-shadow:none}
+
+  /* ---------------- controls strip ---------------- */
+  .strip{margin-top:34px;display:grid;grid-template-columns:1.1fr .9fr;gap:16px}
+  @media(max-width:820px){.strip{grid-template-columns:1fr}}
+  .panel{background:var(--panel2);border:1px solid var(--stroke);border-radius:18px;padding:18px 20px}
+  .panel h2{font-family:var(--mono);font-size:10.5px;letter-spacing:.22em;color:var(--bio2);margin-bottom:12px}
+  .keys{display:grid;gap:8px}
+  .keyrow{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--dim)}
+  .keyrow b{color:#fff;font-weight:600}
+  kbd{font-family:var(--mono);font-size:10px;background:rgba(255,255,255,.08);border:1px solid var(--stroke2);border-bottom-width:2px;border-radius:5px;padding:3px 7px;color:#eaf4ee;min-width:22px;text-align:center;display:inline-block}
+  .keyrow .sp{margin-left:auto;display:flex;gap:4px}
+  .note{font-size:12px;color:var(--faint);line-height:1.6;margin-top:12px}
+  .note code{font-family:var(--mono);font-size:11px;color:var(--bio2);background:rgba(55,224,139,.08);padding:1px 5px;border-radius:4px}
+
+  footer{margin-top:34px;display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--faint)}
+  footer a{color:var(--bio2);text-decoration:none}
+  footer a:hover{text-decoration:underline}
+
+  .skip{position:absolute;left:-9999px;top:auto}
+  .skip:focus{left:16px;top:16px;z-index:9;background:#fff;color:#04120a;padding:10px 16px;border-radius:8px}
 </style>
 </head>
 <body>
-  <div class="card">
+<a class="skip" href="#roster">Skip to level roster</a>
+<div class="shell">
+  <header>
     <span class="logo">FRONTIER</span>
-    <h1>Level C — Overgrown Bio-Lab<br /><em>Carnivorous Jungle Canopy</em></h1>
-    <p>Playable 3D greybox: race the Pack Runner through a bio-lab where carnivorous plants,
-       spore vents and blast doors all try to stop and stall your vehicle before extraction.
-       Simplified pack-driving controls — steer, boost, brake, cut.</p>
-    <a class="btn" href="biolab/index.html">▶ &nbsp;PLAY LEVEL C</a>
-    <p style="font-size:13px;margin-top:18px">Design doc: <a class="doc" href="biolab/LEVEL_DESIGN.md">biolab/LEVEL_DESIGN.md</a> (in repo)</p>
+    <span class="tag">LEVEL SELECT</span>
+    <span class="tag grey" id="countTag">— LEVELS</span>
+    <div class="header-right"><span class="dot-live"></span><span>PACK NET ONLINE</span></div>
+  </header>
+
+  <section class="hero">
+    <h1>CHOOSE YOUR <em>RUN</em></h1>
+    <p>Pick a level below. Each one is a standalone 3D race — the lab, the road and the wildlife
+       all want to <b>stop, stall or eat your vehicle</b> before you reach the extraction pad.
+       Your best times are saved on this device.</p>
+  </section>
+
+  <div class="roster-head" id="roster">
+    <h2>◈ LEVEL ROSTER</h2>
+    <span id="rosterNote">loading…</span>
   </div>
+  <div class="grid" id="grid" role="list"></div>
+
+  <div class="strip">
+    <div class="panel">
+      <h2>⌘ PACK CONTROLS — SAME IN EVERY LEVEL</h2>
+      <div class="keys">
+        <div class="keyrow"><b>Auto-drive</b> — no gas pedal, ever<span class="sp"><kbd>AUTO</kbd></span></div>
+        <div class="keyrow">Steer<span class="sp"><kbd>◀</kbd><kbd>▶</kbd><kbd>A</kbd><kbd>D</kbd></span></div>
+        <div class="keyrow">Boost — burns through vines<span class="sp"><kbd>W</kbd><kbd>▲</kbd><kbd>SHIFT</kbd></span></div>
+        <div class="keyrow">Brake — time doors &amp; jaws<span class="sp"><kbd>S</kbd><kbd>▼</kbd></span></div>
+        <div class="keyrow">Cutter pulse<span class="sp"><kbd>SPACE</kbd></span></div>
+        <div class="keyrow">Pause / restart<span class="sp"><kbd>P</kbd><kbd>R</kbd></span></div>
+      </div>
+      <p class="note">Touch controls appear automatically on phones and tablets. Every level also has a
+        <b>LEVEL SELECT</b> button in its pause and results screens.</p>
+    </div>
+    <div class="panel">
+      <h2>＋ ADDING A LEVEL</h2>
+      <p class="note" style="margin-top:0">
+        This hub is data-driven. Drop a folder next to <code>biolab/</code>, then add one entry to
+        <code>levels.js</code> with <code>status:'playable'</code> and its <code>href</code> —
+        the card, saved-best badge and navigation appear automatically. Slots marked
+        <b>OPEN</b> stay locked until a level fills them.
+      </p>
+      <p class="note">Locked cards are the roadmap, so the roster never has to be rebuilt to grow.</p>
+    </div>
+  </div>
+
+  <footer>
+    <span>FRONTIER · LEVEL SELECT</span>
+    <span>·</span>
+    <span id="built">—</span>
+    <span>·</span>
+    <a href="biolab/LEVEL_DESIGN.md">LEVEL C DESIGN DOC</a>
+  </footer>
+</div>
+
+<script src="levels.js"></script>
+<script>
+(function () {
+  const grid = document.getElementById('grid');
+  const levels = (window.FRONTIER_LEVELS || []).slice();
+  const playable = levels.filter(l => l.status === 'playable').length;
+
+  document.getElementById('countTag').textContent = levels.length + ' LEVEL' + (levels.length === 1 ? '' : 'S');
+  document.getElementById('rosterNote').textContent =
+    playable + ' PLAYABLE · ' + (levels.length - playable) + ' OPEN SLOT' + (levels.length - playable === 1 ? '' : 'S');
+  document.getElementById('built').textContent = levels.length + ' SLOTS IN ROSTER';
+
+  const fmt = s => {
+    if (!isFinite(s)) return null;
+    const m = Math.floor(s / 60), r = s - m * 60;
+    return m + ':' + (r < 10 ? '0' : '') + r.toFixed(1);
+  };
+  const readBest = key => {
+    if (!key) return NaN;
+    try { const v = parseFloat(localStorage.getItem(key)); return isFinite(v) ? v : NaN; }
+    catch (e) { return NaN; }
+  };
+  const medalFor = (lvl, t) => {
+    if (!isFinite(t) || !lvl.medals) return { icon: '·', label: 'NO TIME YET', colour: '#6d8078' };
+    if (t <= lvl.medals.gold) return { icon: '◆', label: 'GOLD', colour: '#ffd24d' };
+    if (t <= lvl.medals.silver) return { icon: '◆', label: 'SILVER', colour: '#dfe6ee' };
+    return { icon: '◆', label: 'BRONZE', colour: '#e0954d' };
+  };
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  const playableCards = [];
+
+  levels.forEach((lvl, i) => {
+    const isPlay = lvl.status === 'playable';
+    const el = document.createElement(isPlay ? 'a' : 'div');
+    el.className = 'card' + (isPlay ? '' : ' locked');
+    el.style.setProperty('--accent', lvl.accent || '#37e08b');
+    el.setAttribute('role', 'listitem');
+    if (isPlay) {
+      el.href = lvl.href;
+      el.setAttribute('aria-label', 'Play Level ' + lvl.code + ': ' + lvl.name);
+      playableCards.push(el);
+    }
+
+    const best = isPlay ? readBest(lvl.bestKey) : NaN;
+    const medal = medalFor(lvl, best);
+
+    const facts = (lvl.facts || []).map(f =>
+      '<div class="fact"><b>' + esc(f[0]) + '</b><span>' + esc(f[1]) + '</span></div>').join('');
+    const hazards = (lvl.hazards || []).length
+      ? '<div class="hazards">' + lvl.hazards.map(h => '<span>' + esc(h) + '</span>').join('') + '</div>' : '';
+
+    el.innerHTML =
+      '<div class="thumb">' +
+        (lvl.thumb
+          ? '<img src="' + esc(lvl.thumb) + '" alt="" loading="lazy" />'
+          : '<div class="blueprint"><div class="ph"><div class="big">+</div>' +
+            '<div class="small">UNBUILT · RESERVED SLOT</div></div></div>') +
+        '<span class="code">LEVEL ' + esc(lvl.code) + (lvl.version ? ' · ' + esc(lvl.version) : '') + '</span>' +
+        '<span class="state ' + (isPlay ? 'play' : 'locked') + '"><i class="pip"></i>' +
+          (isPlay ? 'PLAYABLE' : 'LOCKED') + '</span>' +
+      '</div>' +
+      '<div class="body">' +
+        '<h3>' + esc(lvl.name) + '<small>' + esc(lvl.sub) + '</small></h3>' +
+        (lvl.tagline ? '<div class="tagline">“' + esc(lvl.tagline) + '”</div>' : '') +
+        '<p class="blurb">' + esc(lvl.blurb) + '</p>' +
+        hazards +
+        '<div class="facts">' + facts + '</div>' +
+        (isPlay
+          ? '<div class="record">' +
+              '<span class="medal" style="color:' + medal.colour + '">' + medal.icon + '</span>' +
+              '<span><span class="r-lab">BEST · ' + medal.label + '</span><br />' +
+              '<span class="r-time">' + (isFinite(best) ? fmt(best) : '— : —') + '</span></span>' +
+              '<span class="go">▶ PLAY</span>' +
+            '</div>'
+          : '<div class="record"><span class="locked-cta">OPEN SLOT · NOT BUILT</span></div>') +
+      '</div>';
+
+    grid.appendChild(el);
+  });
+
+  /* keyboard: 1..9 jumps straight into a playable level, arrows move between cards */
+  const cards = [...grid.children];
+  addEventListener('keydown', e => {
+    const n = parseInt(e.key, 10);
+    if (n >= 1 && n <= playableCards.length && !e.metaKey && !e.ctrlKey) {
+      playableCards[n - 1].click(); return;
+    }
+  });
+  let lastBest = NaN;
+  playableCards.forEach(c => { /* nothing: hover/focus handled in CSS */ });
+
+  /* keep the best-time badge fresh if a level is open in another tab */
+  addEventListener('storage', e => {
+    if (levels.some(l => l.bestKey === e.key)) location.reload();
+  });
+})();
+</script>
 </body>
 </html>

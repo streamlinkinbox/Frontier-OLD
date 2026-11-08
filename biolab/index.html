@@ -124,6 +124,12 @@ h1.title em{font-style:normal;color:var(--bio)}
 .btn:hover{transform:translateY(-2px);box-shadow:0 14px 36px rgba(31,94,255,.55)}
 .btn.ghost{background:transparent;border:1px solid var(--stroke2);box-shadow:none;color:var(--dim)}
 .btn.green{background:#0f9d5c;box-shadow:0 10px 30px rgba(55,224,139,.35)}
+.btn.xs{padding:10px 18px;font-size:11px;letter-spacing:.14em}
+#levelsBtn{position:absolute;top:18px;left:18px;z-index:6;pointer-events:auto;display:inline-flex;align-items:center;gap:8px;
+  font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:#dfe9e3;text-decoration:none;
+  background:rgba(6,18,12,.82);border:1px solid var(--stroke2);border-radius:999px;padding:9px 16px;backdrop-filter:blur(6px);transition:border-color .14s,color .14s}
+#levelsBtn:hover{border-color:var(--bio);color:#fff}
+#levelsBtn b{color:var(--bio2)}
 .medals{font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:.06em;line-height:1.7}
 .medals b.g{color:#ffd24d}.medals b.s{color:#dfe6ee}.medals b.b{color:#e0954d}
 .statGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}
@@ -204,6 +210,7 @@ body.touch #touch.on{display:flex}
 
 <!-- ============ START ============ -->
 <div class="screen on" id="startScreen">
+  <a id="levelsBtn" href="../index.html" title="Back to level select (Esc or L)">◀ <b>LEVEL SELECT</b> <span style="color:var(--faint)">ESC</span></a>
   <div class="wrap">
     <div class="logoRow"><span class="logo">FRONTIER</span><span class="tag">LEVEL C · GREYBOX v2</span><span class="tag grey">SHADOW-BOX PROTOTYPE</span></div>
     <h1 class="title">OVERGROWN BIO-LAB<br /><em>CARNIVOROUS JUNGLE CANOPY</em></h1>
@@ -255,6 +262,7 @@ body.touch #touch.on{display:flex}
 
     <div class="cta">
       <button class="btn green" id="startBtn">▶ &nbsp;ENTER THE BIO-LAB</button>
+      <a class="btn ghost xs" href="../index.html" style="text-decoration:none">◀ ALL LEVELS</a>
       <span class="medals">6 zones · ~90 second run · keyboard or touch<br />Best time saved on this device.</span>
     </div>
   </div>
@@ -269,6 +277,7 @@ body.touch #touch.on{display:flex}
     <div class="cta" style="justify-content:center">
       <button class="btn green" id="resumeBtn">▶ &nbsp;RESUME</button>
       <button class="btn ghost" id="restartBtn1">↺ RESTART RUN</button>
+      <a class="btn ghost xs" href="../index.html" style="text-decoration:none">◀ LEVEL SELECT</a>
     </div>
   </div>
 </div>
@@ -292,6 +301,7 @@ body.touch #touch.on{display:flex}
     <div class="cta">
       <button class="btn green" id="againBtn">↺ &nbsp;RUN IT AGAIN</button>
       <button class="btn ghost" id="menuBtn">LEVEL BRIEF</button>
+      <a class="btn ghost xs" href="../index.html" style="text-decoration:none">◀ LEVEL SELECT</a>
     </div>
   </div>
 </div>

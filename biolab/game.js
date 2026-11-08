@@ -1346,8 +1346,13 @@ addEventListener('keydown', e => {
   if (k === 'ArrowUp' || k === 'KeyW' || k === 'ShiftLeft' || k === 'ShiftRight') keys.boost = true;
   if (k === 'ArrowDown' || k === 'KeyS') keys.brake = true;
   if (k === 'Space' && !e.repeat) pulsePressed();
-  if ((k === 'KeyP' || k === 'Escape')) togglePause();
+  if ((k === 'KeyP' || k === 'Escape')) {
+    /* on the brief, Esc backs out to the level roster instead of pausing */
+    if (state === 'menu') { location.href = '../index.html'; return; }
+    togglePause();
+  }
   if (k === 'KeyR' && (state === 'race' || state === 'pause' || state === 'end')) startRun();
+  if (k === 'KeyL' && (state === 'menu' || state === 'pause' || state === 'end')) location.href = '../index.html';
   if (k === 'Enter') { if (state === 'menu') startRun(); else if (state === 'end') startRun(); }
 });
 addEventListener('keyup', e => {
