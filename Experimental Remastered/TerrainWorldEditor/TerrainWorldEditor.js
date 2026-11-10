@@ -12,13 +12,37 @@ import {
     BOUNDARY_FALLOFF_MODES,
     COMBINE_MODES,
     LAYER_TYPE_META,
+    IsErosionLayerType,
     CreateTerrainLayer,
     EvaluateTerrainRegion,
+    StepRegionLiveSimulation,
+    ResetRegionLiveSimulation,
     ExportWorldTerrainsObj,
     ExportWorldTerrainsBinaryStl,
     SeedThreeDemoTerrains,
     Clamp
 } from './Engine/TerrainLayerStack.js';
+import {
+    CLIMATE_REGIMES,
+    WIND_SHIFT_MODES,
+    WEATHER_GROUP_OPTIONS,
+    WeatherSimulationCoordinator,
+    EvaluateSeasonalWeatherForcing
+} from './Engine/TerrainErosionPhysics.js';
+import {
+    GAEA_DATA_MAPS,
+    GAEA_SATMAP_THEMES,
+    GAEA_SURFACE_STAMPS,
+    CreateDefaultTexturingConfig,
+    CreateStampLayer,
+    ComputeAllGaeaDataMaps,
+    RenderGaeaMapToCanvas,
+    RenderAlbedoAndNormalCanvases
+} from './Engine/TerrainGaeaTexturing.js';
+import {
+    TERRAIN_BIOME_PRESETS,
+    ApplyBiomePresetToRegion
+} from './Engine/TerrainPresetsLibrary.js';
 import { WorldMap2DCanvas } from './Engine/WorldMap2DCanvas.js';
 import { TerrainOceanViewport } from './Engine/TerrainOceanViewport.js';
 import {
@@ -63,6 +87,11 @@ class TerrainWorldStudioApp
         this.undoStack = [];
         this.redoStack = [];
         this._evalTimer = null;
+
+        // Live Weather & Erosion Coordinator (supports Solo 1-by-1 OR Shared Weather Group sync!)
+        this.weatherCoordinator = new WeatherSimulationCoordinator();
+        this.simPlaying = false;
+        this.simTargetScope = 'group'; // 'group' | 'solo' | 'all'
 
         // 1. Initialize Infinite 2D World Mask Canvas
         this.map2D = new WorldMap2DCanvas(document.getElementById('Canvas2D'), this.world, {
@@ -260,6 +289,7 @@ class TerrainWorldStudioApp
         Mount('focus-btn', 'Focus');
         Mount('maximize-btn', 'Maximize');
         Mount('object-symbol', 'Mountain');
+        Mount('sim-play-icon', 'Play');
     }
 
     _buildViewportToolRails()
@@ -326,11 +356,59 @@ class TerrainWorldStudioApp
 
         const QuickItems = [
             {
+                title: '+ 4-Season Climate Erosion',
+                desc: 'Coupled snowmelt, fluvial, frost, wind, talus & karst cycle',
+                glyph: 'Snowflake',
+                badge: 'SEASONAL',
+                cls: 'featured-erosion',
+                action: () => this.addProceduralLayer('erosion-seasonal')
+            },
+            {
+                title: '+ Hydraulic & Stream Erosion',
+                desc: 'Mass-balanced non-flooding rivers, gorges & alluvial fans',
+                glyph: 'Droplet',
+                badge: 'FLUVIAL',
+                cls: 'featured-erosion',
+                action: () => this.addProceduralLayer('erosion-hydraulic')
+            },
+            {
+                title: '+ Frost & Thermal Pitting',
+                desc: 'Cryogenic ice-wedge spalling + solar tafoni honeycomb pits',
+                glyph: 'Crack',
+                badge: 'PITTING',
+                cls: 'featured-erosion',
+                action: () => this.addProceduralLayer('erosion-pitting')
+            },
+            {
+                title: '+ Wind Dunes & Canyon Cuts',
+                desc: 'Venturi sandstone wall cuts & undercutting + desert dunes',
+                glyph: 'Wind',
+                badge: 'AEOLIAN',
+                cls: 'featured-erosion',
+                action: () => this.addProceduralLayer('erosion-wind')
+            },
+            {
+                title: '+ Cliff Rockfall & Talus',
+                desc: 'Direct SDF cliff wedge calving & 35° conical scree aprons',
+                glyph: 'Landslide',
+                badge: 'ROCKFALL',
+                cls: 'featured-erosion',
+                action: () => this.addProceduralLayer('erosion-rockfall')
+            },
+            {
+                title: '+ Chemical Karst & Varnish',
+                desc: 'Carbonate doline sinkholes, rillenkarren & Fe/Mn staining',
+                glyph: 'Flask',
+                badge: 'CHEMICAL',
+                cls: 'featured-erosion',
+                action: () => this.addProceduralLayer('erosion-chemical')
+            },
+            {
                 title: '+ 3D Graded Spline (Gizmo)',
                 desc: 'Ramp, ridge, road or pass — drag Green Y ↕ arrow up/down',
                 glyph: 'Gizmo',
                 badge: '3D GIZMO',
-                featured: true,
+                cls: 'featured-spline',
                 action: () => this.addNew3DSplineLayer('grade', '3D Graded Spline Ramp')
             },
             {
@@ -338,7 +416,7 @@ class TerrainWorldStudioApp
                 desc: 'True 3D overhanging rock arch swept along 3D knots',
                 glyph: 'Arch',
                 badge: '3D SDF',
-                featured: false,
+                cls: '',
                 action: () => this.addNew3DSplineLayer('arch3d', '3D Rock Arch Bridge')
             },
             {
@@ -346,7 +424,7 @@ class TerrainWorldStudioApp
                 desc: 'Carve 3D graded river valley or gorge channel',
                 glyph: 'Spline',
                 badge: 'SPLINE',
-                featured: false,
+                cls: '',
                 action: () => this.addNew3DSplineLayer('river', '3D River Valley Spline')
             },
             {
@@ -354,7 +432,7 @@ class TerrainWorldStudioApp
                 desc: 'Alluvial valleys + craggy continental peaks',
                 glyph: 'Mountain',
                 badge: 'FRACTAL',
-                featured: false,
+                cls: '',
                 action: () => this.addProceduralLayer('multifractal')
             },
             {
@@ -362,7 +440,7 @@ class TerrainWorldStudioApp
                 desc: 'Sharp tectonic arête crests & directional chains',
                 glyph: 'Activity',
                 badge: 'RIDGE',
-                featured: false,
+                cls: '',
                 action: () => this.addProceduralLayer('ridged')
             },
             {
@@ -370,7 +448,7 @@ class TerrainWorldStudioApp
                 desc: 'Stepped basalt blocks, craters, or fracture ridges',
                 glyph: 'Boxes',
                 badge: 'CELLULAR',
-                featured: false,
+                cls: '',
                 action: () => this.addProceduralLayer('voronoi')
             },
             {
@@ -378,14 +456,14 @@ class TerrainWorldStudioApp
                 desc: 'Geological dipping benches & canyon strata',
                 glyph: 'Layers',
                 badge: 'STRATA',
-                featured: false,
+                cls: '',
                 action: () => this.addProceduralLayer('terrace')
             }
         ];
 
         for (const Item of QuickItems)
         {
-            const Btn = MakeEl('button', 'quick-add-card' + (Item.featured ? ' featured-spline' : ''));
+            const Btn = MakeEl('button', 'quick-add-card' + (Item.cls ? ` ${Item.cls}` : ''));
             Btn.type = 'button';
             const Icon = MakeEl('span', 'quick-add-icon', ConstructGlyph(Item.glyph));
             const Copy = MakeEl('span', 'quick-add-copy', [
@@ -405,18 +483,16 @@ class TerrainWorldStudioApp
         if (!Strip) return;
         Strip.innerHTML = '';
 
-        const Chips = [
+        const CoreChips = [
             ['All 3 Demo Terrains', () => { this.view3D.viewScope = 'all'; document.getElementById('scope-select').value = 'all'; this.view3D.frameVisibleWorld(); this.refreshChrome(); }],
-            ['Solo: Highland Massif (Soft Falloff)', () => this._focusSingleRegion(0)],
-            ['Solo: Basalt Cliffs (No Falloff · Sheer Cliff)', () => this._focusSingleRegion(1)],
-            ['Solo: Caldera Atoll (Rim Ring Falloff)', () => this._focusSingleRegion(2)],
-            ['Inspect Thin SDF Slab (Ocean OFF)', () => { this.world.oceanVisible = false; this._syncOceanUI(); }],
-            ['Export .STL Binary', () => this._exportStl()]
+            ['Solo 01 · Alpine (Group A)', () => this._focusSingleRegion(0)],
+            ['Solo 02 · Basalt Cliffs (Solo)', () => this._focusSingleRegion(1)],
+            ['Solo 03 · Utah Canyon (Group A)', () => this._focusSingleRegion(2)]
         ];
 
-        for (let I = 0; I < Chips.length; ++I)
+        for (let I = 0; I < CoreChips.length; ++I)
         {
-            const [Label, Fn] = Chips[I];
+            const [Label, Fn] = CoreChips[I];
             const Chip = MakeEl('button', 'history-chip' + (I === 0 ? ' current' : ''), Label);
             Chip.type = 'button';
             Chip.addEventListener('click', () =>
@@ -427,6 +503,39 @@ class TerrainWorldStudioApp
             });
             Strip.appendChild(Chip);
         }
+
+        // All 18 Physically-Grounded Biome + Erosion + SatMap + Stamp Presets!
+        for (const Preset of TERRAIN_BIOME_PRESETS)
+        {
+            const Chip = MakeEl('button', 'history-chip', `Preset · ${Preset.name}`);
+            Chip.type = 'button';
+            Chip.title = `${Preset.category}: ${Preset.summary}`;
+            Chip.dataset.presetId = Preset.id;
+            Chip.addEventListener('click', () =>
+            {
+                for (const C of Strip.querySelectorAll('.history-chip')) C.classList.remove('current');
+                Chip.classList.add('current');
+                this.applyPresetToActiveRegion(Preset.id);
+            });
+            Strip.appendChild(Chip);
+        }
+    }
+
+    applyPresetToActiveRegion(PresetId)
+    {
+        const Reg = this.getActiveRegion();
+        if (!Reg) return;
+        this.pushUndoSnapshot();
+        ApplyBiomePresetToRegion(Reg, PresetId, CreateTerrainLayer);
+        EvaluateTerrainRegion(this.world, Reg);
+        Reg.meshDirty = true;
+        this.activeLayerId = Reg.stack[Reg.stack.length - 1]?.id || null;
+        const Sp = Reg.stack.find(L => L.type === 'spline');
+        this.view3D.activeSplineLayerId = Sp?.id || null;
+        this.map2D.invalidateRegionPreview(Reg.id);
+        this.map2D.requestRedraw();
+        this.refreshChrome();
+        this.rebuildInspector();
     }
 
     _focusSingleRegion(Index)
@@ -786,11 +895,29 @@ class TerrainWorldStudioApp
         {
             this.view3D.lensMode = Number(E.target.value);
         });
+        document.getElementById('toggle-rivers-btn')?.addEventListener('click', E =>
+        {
+            this.view3D.showRivers = !this.view3D.showRivers;
+            E.currentTarget.classList.toggle('active', this.view3D.showRivers);
+            E.currentTarget.textContent = this.view3D.showRivers ? 'Rivers ON' : 'Rivers OFF';
+            this.rebuildInspector();
+        });
         document.getElementById('toggle-ocean-btn')?.addEventListener('click', () =>
         {
             this.world.oceanVisible = !this.world.oceanVisible;
             this._syncOceanUI();
             this.rebuildInspector();
+        });
+
+        // Live Weather & Erosion Transport Controls (Solo 1-by-1 vs Shared Weather Group!)
+        document.getElementById('sim-play-btn')?.addEventListener('click', () => this.toggleSimulationPlaying());
+        document.getElementById('sim-step1-btn')?.addEventListener('click', () => this.stepWeatherSimulation(1, true));
+        document.getElementById('sim-step15-btn')?.addEventListener('click', () => this.stepWeatherSimulation(15, true));
+        document.getElementById('sim-reset-btn')?.addEventListener('click', () => this.resetSimulationForTarget());
+        document.getElementById('sim-target-select')?.addEventListener('change', E =>
+        {
+            this.simTargetScope = E.target.value;
+            this._syncSimWeatherReadout();
         });
         document.getElementById('toggle-gizmo-btn')?.addEventListener('click', E =>
         {
@@ -1106,9 +1233,10 @@ class TerrainWorldStudioApp
                     const GlyphSpan = MakeEl('span', 'row-glyph', ConstructGlyph('Mountain'));
                     GlyphSpan.style.color = R.color || '#e8c27a';
                     const B = R.bounds;
+                    const WGrp = R.weatherGroup && R.weatherGroup !== 'solo' ? ` · ⇄ ${R.weatherGroup.replace('group-', 'GRP-').toUpperCase()}` : ' · SOLO';
                     const Copy = MakeEl('span', 'row-copy', [
                         MakeEl('div', 'row-name', R.name),
-                        MakeEl('div', 'row-meta', `${(B.width / 1000).toFixed(2)}×${(B.depth / 1000).toFixed(2)} km · ${R.stack.length} layers`)
+                        MakeEl('div', 'row-meta', `${(B.width / 1000).toFixed(2)}×${(B.depth / 1000).toFixed(2)} km · ${R.stack.length} layers${WGrp}`)
                     ]);
                     SelBtn.append(GlyphSpan, Copy);
                     SelBtn.addEventListener('click', E =>
@@ -1146,13 +1274,14 @@ class TerrainWorldStudioApp
                     Group.appendChild(Row);
                 }
 
-                // Show nested layers for active region (or all spline layers when filtering by 'splines')
-                if ((R.id === this.activeRegionId && this.outlinerFilter === 'all') || this.outlinerFilter === 'splines')
+                // Show nested layers for active region (or all matching layers when filtering by 'splines' or 'erosion')
+                if ((R.id === this.activeRegionId && this.outlinerFilter === 'all') || this.outlinerFilter === 'splines' || this.outlinerFilter === 'erosion')
                 {
                     for (let I = R.stack.length - 1; I >= 0; --I)
                     {
                         const Lyr = R.stack[I];
                         if (this.outlinerFilter === 'splines' && Lyr.type !== 'spline') continue;
+                        if (this.outlinerFilter === 'erosion' && !IsErosionLayerType(Lyr.type)) continue;
                         if (Q && !Lyr.name.toLowerCase().includes(Q)) continue;
 
                         const IsSelLyr = R.id === this.activeRegionId && Lyr.id === this.activeLayerId;
@@ -1162,10 +1291,12 @@ class TerrainWorldStudioApp
 
                         const LSel = MakeEl('button', 'row-select');
                         LSel.type = 'button';
-                        const LGlyph = MakeEl('span', 'row-glyph', ConstructGlyph(Lyr.type === 'spline' ? 'Spline' : 'Layers'));
+                        const LGlyph = MakeEl('span', 'row-glyph', ConstructGlyph(Meta.glyph || 'Layers'));
                         const FallTag = Lyr.type === 'spline'
                             ? `${Lyr.points?.length || 0} 3D knots · ${Lyr.splineMode}`
-                            : (Lyr.falloff?.mode === 'none' ? 'Falloff: NONE (Cliff)' : `Falloff: ${Lyr.falloff?.mode} (${Math.round(Lyr.falloff?.distance || 260)}m)`);
+                            : IsErosionLayerType(Lyr.type)
+                                ? `${Meta.badge} · ${Lyr.iterations ?? 12} iters`
+                                : (Lyr.falloff?.mode === 'none' ? 'Falloff: NONE (Cliff)' : `Falloff: ${Lyr.falloff?.mode} (${Math.round(Lyr.falloff?.distance || 260)}m)`);
                         LSel.append(LGlyph, MakeEl('span', 'row-copy', [
                             MakeEl('div', 'row-name', Lyr.name),
                             MakeEl('div', 'row-meta', FallTag)
@@ -1296,10 +1427,116 @@ class TerrainWorldStudioApp
         const VisCount = this.view3D.getVisibleRegions().length;
         document.getElementById('hud-3d-scope').textContent = `${VisCount} TERRAIN${VisCount === 1 ? '' : 'S'}`;
         document.getElementById('status-tiles').textContent = `Sparse 2D Tiles: ${TilesCount} (${(this.world.totalAllocatedBytes() / 1024).toFixed(0)} KB)`;
+        this._syncSimWeatherReadout();
     }
 
     /*======================================================================================================================================
-                              RIGHT CONTEXTUAL INSPECTOR (KPI TRIO + 4 TABS MATCHING 3D CLAY STUDIO)
+                              LIVE WEATHER & EROSION SIMULATION COORDINATOR (SOLO 1-BY-1 vs SHARED GROUP)
+    ======================================================================================================================================*/
+    toggleSimulationPlaying()
+    {
+        this.simPlaying = !this.simPlaying;
+        const Btn = document.getElementById('sim-play-btn');
+        const Icon = document.getElementById('sim-play-icon');
+        const Lbl = document.getElementById('sim-play-label');
+        if (Btn) Btn.classList.toggle('running', this.simPlaying);
+        if (Icon) { Icon.innerHTML = ''; Icon.appendChild(ConstructGlyph(this.simPlaying ? 'Pause' : 'Play')); }
+        if (Lbl) Lbl.textContent = this.simPlaying ? 'Simulating' : 'Simulate';
+    }
+
+    _getSimulationTargetRegions()
+    {
+        const Active = this.getActiveRegion();
+        if (!Active) return [];
+        if (this.simTargetScope === 'solo' || (this.simTargetScope === 'group' && (!Active.weatherGroup || Active.weatherGroup === 'solo')))
+        {
+            return [Active];
+        }
+        if (this.simTargetScope === 'all' || Active.weatherGroup === 'world-sync')
+        {
+            return this.world.regions.filter(R => R.enabled);
+        }
+        const GroupId = Active.weatherGroup;
+        return this.world.regions.filter(R => R.enabled && R.weatherGroup === GroupId);
+    }
+
+    stepWeatherSimulation(Steps = 1, RebuildUI = false)
+    {
+        const Targets = this._getSimulationTargetRegions();
+        if (!Targets.length) return;
+
+        const Active = this.getActiveRegion();
+        const IsSharedGroup = this.simTargetScope !== 'solo' && Active && Active.weatherGroup && Active.weatherGroup !== 'solo';
+
+        for (let S = 0; S < Steps; ++S)
+        {
+            if (IsSharedGroup)
+            {
+                // Advance the shared group meteorological clock ONCE and broadcast the EXACT same weather forcing to every linked terrain!
+                const Clock = this.weatherCoordinator.getGroupClock(Active.weatherGroup, Active.weatherSpec || {});
+                Clock.weatherSpec = { ...(Active.weatherSpec || Clock.weatherSpec) };
+                const SharedForcing = EvaluateSeasonalWeatherForcing(Clock.weatherSpec, Clock.stepIndex);
+                Clock.stepIndex += 1;
+
+                for (const Reg of Targets)
+                {
+                    StepRegionLiveSimulation(this.world, Reg, SharedForcing, 1);
+                    this.map2D.invalidateRegionPreview(Reg.id);
+                }
+            }
+            else
+            {
+                // Independent 1-by-1 per-mask weather clock!
+                for (const Reg of Targets)
+                {
+                    StepRegionLiveSimulation(this.world, Reg, null, 1);
+                    this.map2D.invalidateRegionPreview(Reg.id);
+                }
+            }
+        }
+
+        this.map2D.requestRedraw();
+        this._syncSimWeatherReadout();
+        if (RebuildUI)
+        {
+            this.refreshChrome();
+            this.rebuildInspector();
+        }
+    }
+
+    resetSimulationForTarget()
+    {
+        if (this.simPlaying) this.toggleSimulationPlaying();
+        const Targets = this._getSimulationTargetRegions();
+        const Active = this.getActiveRegion();
+        if (Active?.weatherGroup) this.weatherCoordinator.resetGroupClock(Active.weatherGroup);
+        for (const Reg of Targets)
+        {
+            ResetRegionLiveSimulation(this.world, Reg);
+            this.map2D.invalidateRegionPreview(Reg.id);
+        }
+        this.map2D.requestRedraw();
+        this.refreshChrome();
+        this.rebuildInspector();
+    }
+
+    _syncSimWeatherReadout()
+    {
+        const Pill = document.getElementById('sim-weather-pill');
+        const Reg = this.getActiveRegion();
+        if (!Pill || !Reg) return;
+
+        const Steps = Reg.runtime?.erosion?.totalSteps || 0;
+        const Forcing = EvaluateSeasonalWeatherForcing(Reg.weatherSpec || {}, Steps);
+        const Grp = (this.simTargetScope === 'solo' || !Reg.weatherGroup || Reg.weatherGroup === 'solo')
+            ? 'SOLO'
+            : (this.simTargetScope === 'all' ? 'ALL' : Reg.weatherGroup.replace('group-', 'GRP-').replace('world-sync', 'WORLD').toUpperCase());
+        const WindDeg = Math.round(((Forcing.windAzimuthDeg ?? 35) % 360 + 360) % 360);
+        Pill.textContent = `${Grp} · ${Forcing.seasonName} · ${WindDeg}° · ${Steps}st`;
+    }
+
+    /*======================================================================================================================================
+                              RIGHT CONTEXTUAL INSPECTOR (KPI TRIO + 5 TABS MATCHING 3D CLAY STUDIO)
     ======================================================================================================================================*/
     rebuildInspector()
     {
@@ -1313,6 +1550,10 @@ class TerrainWorldStudioApp
         // Top KPI Trio (#eff4cf highlight card just like 3D Clay Studio!)
         const PeakM = Math.round(Region.runtime?.maxHeight ?? 0);
         const AreaKm = (Region.runtime?.landAreaKm2 ?? 0).toFixed(2);
+        const SimSteps = Region.runtime?.erosion?.totalSteps ?? 0;
+        const WGrpTag = Region.weatherGroup && Region.weatherGroup !== 'solo'
+            ? Region.weatherGroup.replace('group-', 'Group ').toUpperCase()
+            : 'Solo Clock';
         const Trio = MakeEl('div', 'kpi-trio', [
             MakeEl('div', 'kpi-card highlight', [
                 MakeEl('span', 'kpi-label', 'Peak Relief'),
@@ -1320,19 +1561,19 @@ class TerrainWorldStudioApp
                 MakeEl('span', 'kpi-sub', `${AreaKm} km² landmass`)
             ]),
             MakeEl('div', 'kpi-card', [
-                MakeEl('span', 'kpi-label', 'Thin SDF Wafer'),
-                MakeEl('strong', 'kpi-val', `-${Region.slabThickness.toFixed(1)} m`),
-                MakeEl('span', 'kpi-sub', 'Zero deep waste')
+                MakeEl('span', 'kpi-label', 'Erosion & Weather'),
+                MakeEl('strong', 'kpi-val', `${SimSteps} st`),
+                MakeEl('span', 'kpi-sub', WGrpTag)
             ]),
             MakeEl('div', 'kpi-card', [
-                MakeEl('span', 'kpi-label', 'Layer Stack'),
-                MakeEl('strong', 'kpi-val', String(Region.stack.length)),
-                MakeEl('span', 'kpi-sub', `${Region.stack.filter(L => L.type === 'spline').length} 3D spline(s)`)
+                MakeEl('span', 'kpi-label', 'Gaea & Stack'),
+                MakeEl('strong', 'kpi-val', `${Region.stack.length} L`),
+                MakeEl('span', 'kpi-sub', `16 maps · ${Region.texturing?.stamps?.length || 0} stamps`)
             ])
         ]);
         Content.appendChild(Trio);
 
-        // 4 Sun Quick-Control Feature Tiles
+        // 4 Quick-Control Feature Tiles
         const Switches = MakeEl('div', 'property-switches');
         const MakeTile = (Label, Glyph, IsOn, OnClick) =>
         {
@@ -1347,23 +1588,28 @@ class TerrainWorldStudioApp
             return B;
         };
         Switches.append(
+            MakeTile('Rivers', 'Droplet', this.view3D.showRivers !== false, () => document.getElementById('toggle-rivers-btn')?.click()),
             MakeTile('Ocean', 'Water', this.world.oceanVisible !== false, () => document.getElementById('toggle-ocean-btn')?.click()),
             MakeTile('3D Gizmo', 'Gizmo', this.view3D.showGizmo, () => document.getElementById('toggle-gizmo-btn')?.click()),
-            MakeTile('Bounds', 'Scan', this.view3D.showBounds3D, () => document.getElementById('toggle-bounds-btn')?.click()),
             MakeTile('Contours', 'Activity', this.view3D.showContours, () => document.getElementById('toggle-contours-btn')?.click())
         );
         Content.appendChild(Switches);
 
-        if (this.inspectorTab === 'spline')
+        if (this.inspectorTab === 'weather')
+        {
+            this._buildWeatherAndGeologyTab(Content, Region);
+        }
+        else if (this.inspectorTab === 'gaea')
+        {
+            this._buildGaeaTexturingTab(Content, Region);
+        }
+        else if (this.inspectorTab === 'spline')
         {
             this._buildSplineInspectorTab(Content, Region);
         }
-        else if (this.inspectorTab === 'slab')
+        else if (this.inspectorTab === 'slab' || this.inspectorTab === 'stage')
         {
             this._buildThinSlabInspectorTab(Content, Region);
-        }
-        else if (this.inspectorTab === 'stage')
-        {
             this._buildStageAndExportTab(Content, Region);
         }
         else
@@ -1379,11 +1625,11 @@ class TerrainWorldStudioApp
     {
         const ActiveLayer = Region.stack.find(L => L.id === this.activeLayerId) || Region.stack[Region.stack.length - 1];
 
-        // Quick Add Bar at top of Layers tab
-        const StackGroup = MakePropertyGroup('Composable Layer Stack', 'Layers', `${Region.stack.length} LAYERS`, true,
-            'Click any layer in the Outliner or add a procedural generator / 3D spline below.');
+        // Quick Add Bar at top of Layers tab (Landforms + Composable Physics Erosion Layers!)
+        const StackGroup = MakePropertyGroup('Composable Layer & Erosion Stack', 'Layers', `${Region.stack.length} LAYERS`, true,
+            'Stack base landforms, splines, and physically-based erosion processes in any bottom-to-top order.');
         const BtnRow = MakeEl('div', 'studio-btn-row');
-        const BtnAddSp = MakeEl('button', 'button export-button', '+ Add 3D Spline (Gizmo)');
+        const BtnAddSp = MakeEl('button', 'button export-button', '+ 3D Spline');
         BtnAddSp.type = 'button';
         BtnAddSp.addEventListener('click', () => this.addNew3DSplineLayer('grade', '3D Graded Spline Ramp'));
 
@@ -1394,9 +1640,26 @@ class TerrainWorldStudioApp
         const BtnAddVor = MakeEl('button', 'button', '+ Voronoi Cliff');
         BtnAddVor.type = 'button';
         BtnAddVor.addEventListener('click', () => this.addProceduralLayer('voronoi'));
-
         BtnRow.append(BtnAddSp, BtnAddFrac, BtnAddVor);
-        StackGroup.Body.appendChild(BtnRow);
+
+        const EroRow1 = MakeEl('div', 'studio-btn-row');
+        for (const [Lbl, Typ] of [['+ Seasonal', 'erosion-seasonal'], ['+ Hydraulic', 'erosion-hydraulic'], ['+ Pitting', 'erosion-pitting']])
+        {
+            const B = MakeEl('button', 'button', Lbl);
+            B.type = 'button';
+            B.addEventListener('click', () => this.addProceduralLayer(Typ));
+            EroRow1.appendChild(B);
+        }
+        const EroRow2 = MakeEl('div', 'studio-btn-row');
+        for (const [Lbl, Typ] of [['+ Wind Cuts', 'erosion-wind'], ['+ Rockfall', 'erosion-rockfall'], ['+ Chemical', 'erosion-chemical']])
+        {
+            const B = MakeEl('button', 'button', Lbl);
+            B.type = 'button';
+            B.addEventListener('click', () => this.addProceduralLayer(Typ));
+            EroRow2.appendChild(B);
+        }
+
+        StackGroup.Body.append(BtnRow, EroRow1, EroRow2);
         Content.appendChild(StackGroup.Group);
 
         if (!ActiveLayer) return;
@@ -1450,7 +1713,7 @@ class TerrainWorldStudioApp
         const GenGroup = MakePropertyGroup(ActiveLayer.name, 'Mountain', ActiveLayer.type.toUpperCase(), true);
         GenGroup.Body.appendChild(MakeSliderPillRow('Layer Blend Opacity', 0.0, 1.0, 0.01, ActiveLayer.opacity ?? 1.0, 2, 'w', V => { ActiveLayer.opacity = V; TriggerLive(); }, TriggerCommit));
 
-        if (!['terrace', 'spline', 'sculpt'].includes(ActiveLayer.type))
+        if (!['terrace', 'spline', 'sculpt'].includes(ActiveLayer.type) && !IsErosionLayerType(ActiveLayer.type))
         {
             GenGroup.Body.appendChild(MakeSelectRow('Combine Mode', COMBINE_MODES, ActiveLayer.combine || 'add', Val =>
             {
@@ -1514,25 +1777,391 @@ class TerrainWorldStudioApp
             });
             GenGroup.Body.appendChild(JumpBtn);
         }
-
-        if (['multifractal', 'ridged', 'voronoi', 'billow'].includes(ActiveLayer.type))
+        else if (ActiveLayer.type === 'erosion-hydraulic')
         {
-            const SeedRow = MakeEl('div', 'studio-btn-row');
-            const SeedBtn = MakeEl('button', 'button', `Randomize Seed (#${ActiveLayer.seed})`);
+            GenGroup.Body.appendChild(MakeSliderPillRow('Solver Iterations', 1, 80, 1, ActiveLayer.iterations ?? 18, 0, 'it', V => { ActiveLayer.iterations = V; TriggerLive(); }, TriggerCommit));
+            GenGroup.Body.appendChild(MakeSliderPillRow('Rainfall Intensity', 0.05, 1.5, 0.02, ActiveLayer.rainRate ?? 0.58, 2, '×', V => { ActiveLayer.rainRate = V; TriggerLive(); }, TriggerCommit));
+            GenGroup.Body.appendChild(MakeSliderPillRow('Stream Shear Incision', 0.05, 1.8, 0.02, ActiveLayer.erosionRate ?? 0.68, 2, '×', V => { ActiveLayer.erosionRate = V; TriggerLive(); }, TriggerCommit));
+            GenGroup.Body.appendChild(MakeSliderPillRow('Alluvial Fan Deposition', 0.05, 1.5, 0.02, ActiveLayer.depositionRate ?? 0.54, 2, '×', V => { ActiveLayer.depositionRate = V; TriggerLive(); }, TriggerCommit));
+            GenGroup.Body.appendChild(MakeSliderPillRow('Slope Infiltration (Anti-Flood)', 0.02, 0.85, 0.02, ActiveLayer.infiltration ?? 0.14, 2, 'w', V => { ActiveLayer.infiltration = V; TriggerLive(); }, TriggerCommit));
+            GenGroup.Body.appendChild(MakeSliderPillRow('Evaporation Rate', 0.02, 0.85, 0.02, ActiveLayer.evaporation ?? 0.24, 2, 'w', V => { ActiveLayer.evaporation = V; TriggerLive(); }, TriggerCommit));
+        }
+        else if (ActiveLayer.type === 'erosion-pitting')
+        {
+            GenGroup.Body.appendChild(MakeSliderPillRow('Solver Iterations', 1, 60, 1, ActiveLayer.iterations ?? 12, 0, 'it', V => { ActiveLayer.iterations = V; TriggerLive(); }, TriggerCommit));
+            GenGroup.Body.appendChild(MakeSliderPillRow('Frost-Crack Ice Expansion', 0.0, 1.8, 0.02, ActiveLayer.frostIntensity ?? 0.68, 2, '×', V => { ActiveLayer.frostIntensity = V; TriggerLive(); }, TriggerCommit));
+            GenGroup.Body.appendChild(MakeSliderPillRow('Solar Thermal Fatigue', 0.0, 1.8, 0.02, ActiveLayer.thermalIntensity ?? 0.56, 2, '×', V => { ActiveLayer.thermalIntensity = V; TriggerLive(); }, TriggerCommit));
+            GenGroup.Body.appendChild(MakeSliderPillRow('Tafoni Honeycomb Cavities', 0.0, 1.5, 0.02, ActiveLayer.tafoniStrength ?? 0.45, 2, '×', V => { ActiveLayer.tafoniStrength = V; TriggerLive(); }, TriggerCommit));
+            GenGroup.Body.appendChild(MakeSliderPillRow('Joint Seam Exploitation', 0.1, 1.5, 0.02, ActiveLayer.jointExploit ?? 0.72, 2, '×', V => { ActiveLayer.jointExploit = V; TriggerLive(); }, TriggerCommit));
+            GenGroup.Body.appendChild(MakeSliderPillRow('Pit & Fracture Scale', 0.35, 2.4, 0.05, ActiveLayer.pitScale ?? 0.70, 2, '×', V => { ActiveLayer.pitScale = V; TriggerLive(); }, TriggerCommit));
+        }
+        else if (ActiveLayer.type === 'erosion-wind')
+        {
+            GenGroup.Body.appendChild(MakeSliderPillRow('Solver Iterations', 1, 60, 1, ActiveLayer.iterations ?? 14, 0, 'it', V => { ActiveLayer.iterations = V; TriggerLive(); }, TriggerCommit));
+            GenGroup.Body.appendChild(MakeSliderPillRow('Wind Velocity', 0.05, 1.8, 0.02, ActiveLayer.windSpeed ?? 0.72, 2, '×', V => { ActiveLayer.windSpeed = V; TriggerLive(); }, TriggerCommit));
+            GenGroup.Body.appendChild(MakeSliderPillRow('Canyon Sandstone Cuts', 0.0, 2.0, 0.02, ActiveLayer.canyonAbrasion ?? 0.76, 2, '×', V => { ActiveLayer.canyonAbrasion = V; TriggerLive(); }, TriggerCommit));
+            GenGroup.Body.appendChild(MakeSliderPillRow('Venturi Strata Undercut', 0.0, 1.8, 0.02, ActiveLayer.strataUndercut ?? 0.78, 2, '×', V => { ActiveLayer.strataUndercut = V; TriggerLive(); }, TriggerCommit));
+            GenGroup.Body.appendChild(MakeSliderPillRow('Bagnold Dune Saltation', 0.0, 1.8, 0.02, ActiveLayer.duneStrength ?? 0.66, 2, '×', V => { ActiveLayer.duneStrength = V; TriggerLive(); }, TriggerCommit));
+            GenGroup.Body.appendChild(MakeSliderPillRow('Aeolian Sand Supply', 0.0, 1.5, 0.02, ActiveLayer.sandSupply ?? 0.52, 2, '×', V => { ActiveLayer.sandSupply = V; TriggerLive(); }, TriggerCommit));
+            GenGroup.Body.appendChild(MakeSliderPillRow('Local Wind Azimuth', 0, 360, 1, ActiveLayer.windAzimuthDeg ?? 35, 0, '°', V => { ActiveLayer.windAzimuthDeg = V; ActiveLayer.useWeatherWind = false; TriggerLive(); }, TriggerCommit));
+        }
+        else if (ActiveLayer.type === 'erosion-rockfall')
+        {
+            GenGroup.Body.appendChild(MakeSliderPillRow('Solver Iterations', 1, 50, 1, ActiveLayer.iterations ?? 12, 0, 'it', V => { ActiveLayer.iterations = V; TriggerLive(); }, TriggerCommit));
+            GenGroup.Body.appendChild(MakeSliderPillRow('Cliff Calving Intensity', 0.05, 2.0, 0.02, ActiveLayer.calvingRate ?? 0.66, 2, '×', V => { ActiveLayer.calvingRate = V; TriggerLive(); }, TriggerCommit));
+            GenGroup.Body.appendChild(MakeSliderPillRow('Critical Cliff Angle', 30, 74, 1, ActiveLayer.criticalSlopeDeg ?? 51, 0, '°', V => { ActiveLayer.criticalSlopeDeg = V; TriggerLive(); }, TriggerCommit));
+            GenGroup.Body.appendChild(MakeSliderPillRow('Talus Scree Repose Angle', 26, 43, 0.5, ActiveLayer.talusReposeDeg ?? 35, 1, '°', V => { ActiveLayer.talusReposeDeg = V; TriggerLive(); }, TriggerCommit));
+            GenGroup.Body.appendChild(MakeSliderPillRow('Kinetic Runout Mobility', 0.1, 1.5, 0.02, ActiveLayer.runoutMobility ?? 0.68, 2, '×', V => { ActiveLayer.runoutMobility = V; TriggerLive(); }, TriggerCommit));
+        }
+        else if (ActiveLayer.type === 'erosion-chemical')
+        {
+            GenGroup.Body.appendChild(MakeSliderPillRow('Solver Iterations', 1, 50, 1, ActiveLayer.iterations ?? 10, 0, 'it', V => { ActiveLayer.iterations = V; TriggerLive(); }, TriggerCommit));
+            GenGroup.Body.appendChild(MakeSliderPillRow('Karst Carbonate Dissolution', 0.0, 1.8, 0.02, ActiveLayer.karstRate ?? 0.64, 2, '×', V => { ActiveLayer.karstRate = V; TriggerLive(); }, TriggerCommit));
+            GenGroup.Body.appendChild(MakeSliderPillRow('Doline Sinkhole Focus', 0.0, 1.5, 0.02, ActiveLayer.sinkholeStrength ?? 0.54, 2, '×', V => { ActiveLayer.sinkholeStrength = V; TriggerLive(); }, TriggerCommit));
+            GenGroup.Body.appendChild(MakeSliderPillRow('Rillenkarren & Salt Haloclasty', 0.0, 1.5, 0.02, ActiveLayer.rillenStrength ?? 0.56, 2, '×', V => { ActiveLayer.rillenStrength = V; TriggerLive(); }, TriggerCommit));
+            GenGroup.Body.appendChild(MakeSliderPillRow('Fe/Mn Varnish & Seep Stain', 0.0, 1.8, 0.02, ActiveLayer.stainIntensity ?? 0.68, 2, '×', V => { ActiveLayer.stainIntensity = V; TriggerLive(); }, TriggerCommit));
+        }
+        else if (ActiveLayer.type === 'erosion-seasonal')
+        {
+            GenGroup.Body.appendChild(MakeSliderPillRow('Seasonal Steps', 1, 80, 1, ActiveLayer.iterations ?? 20, 0, 'st', V => { ActiveLayer.iterations = V; TriggerLive(); }, TriggerCommit));
+            GenGroup.Body.appendChild(MakeSliderPillRow('Fluvial & Snowmelt Runoff', 0.0, 1.6, 0.02, ActiveLayer.hydraulicStrength ?? 0.72, 2, '×', V => { ActiveLayer.hydraulicStrength = V; TriggerLive(); }, TriggerCommit));
+            GenGroup.Body.appendChild(MakeSliderPillRow('Winter Frost-Crack Pitting', 0.0, 1.6, 0.02, ActiveLayer.frostStrength ?? 0.68, 2, '×', V => { ActiveLayer.frostStrength = V; TriggerLive(); }, TriggerCommit));
+            GenGroup.Body.appendChild(MakeSliderPillRow('Summer Insolation Fatigue', 0.0, 1.6, 0.02, ActiveLayer.thermalStrength ?? 0.45, 2, '×', V => { ActiveLayer.thermalStrength = V; TriggerLive(); }, TriggerCommit));
+            GenGroup.Body.appendChild(MakeSliderPillRow('Aeolian Wind & Cuts', 0.0, 1.6, 0.02, ActiveLayer.windStrength ?? 0.52, 2, '×', V => { ActiveLayer.windStrength = V; TriggerLive(); }, TriggerCommit));
+            GenGroup.Body.appendChild(MakeSliderPillRow('Cliff Rockfall & Talus', 0.0, 1.6, 0.02, ActiveLayer.rockfallStrength ?? 0.65, 2, '×', V => { ActiveLayer.rockfallStrength = V; TriggerLive(); }, TriggerCommit));
+            GenGroup.Body.appendChild(MakeSliderPillRow('Chemical Karst & Stain', 0.0, 1.6, 0.02, ActiveLayer.chemicalStrength ?? 0.36, 2, '×', V => { ActiveLayer.chemicalStrength = V; TriggerLive(); }, TriggerCommit));
+            GenGroup.Body.appendChild(MakeSliderPillRow('Snowpack & Cirque Glacial', 0.0, 1.6, 0.02, ActiveLayer.snowStrength ?? 0.62, 2, '×', V => { ActiveLayer.snowStrength = V; TriggerLive(); }, TriggerCommit));
+        }
+
+        // Stack Order & Seed Row
+        const LyrIdx = Region.stack.indexOf(ActiveLayer);
+        const OrderRow = MakeEl('div', 'studio-btn-row');
+        const BtnUp = MakeEl('button', 'button', 'Move Up ↑');
+        BtnUp.type = 'button';
+        BtnUp.disabled = LyrIdx < 0 || LyrIdx >= Region.stack.length - 1;
+        BtnUp.addEventListener('click', () =>
+        {
+            if (LyrIdx >= Region.stack.length - 1) return;
+            this.pushUndoSnapshot();
+            const Tmp = Region.stack[LyrIdx + 1];
+            Region.stack[LyrIdx + 1] = ActiveLayer;
+            Region.stack[LyrIdx] = Tmp;
+            TriggerLive(); TriggerCommit(); this.rebuildInspector();
+        });
+        const BtnDn = MakeEl('button', 'button', 'Move Down ↓');
+        BtnDn.type = 'button';
+        BtnDn.disabled = LyrIdx <= 0;
+        BtnDn.addEventListener('click', () =>
+        {
+            if (LyrIdx <= 0) return;
+            this.pushUndoSnapshot();
+            const Tmp = Region.stack[LyrIdx - 1];
+            Region.stack[LyrIdx - 1] = ActiveLayer;
+            Region.stack[LyrIdx] = Tmp;
+            TriggerLive(); TriggerCommit(); this.rebuildInspector();
+        });
+        OrderRow.append(BtnUp, BtnDn);
+
+        if (['multifractal', 'ridged', 'voronoi', 'billow'].includes(ActiveLayer.type) || IsErosionLayerType(ActiveLayer.type))
+        {
+            const SeedBtn = MakeEl('button', 'button', `Seed #${ActiveLayer.seed}`);
             SeedBtn.type = 'button';
             SeedBtn.addEventListener('click', () =>
             {
                 this.pushUndoSnapshot();
                 ActiveLayer.seed = Math.floor(1000 + Math.random() * 89000);
-                TriggerLive();
-                TriggerCommit();
-                this.rebuildInspector();
+                TriggerLive(); TriggerCommit(); this.rebuildInspector();
             });
-            SeedRow.appendChild(SeedBtn);
-            GenGroup.Body.appendChild(SeedRow);
+            OrderRow.appendChild(SeedBtn);
         }
+        GenGroup.Body.appendChild(OrderRow);
 
         Content.appendChild(GenGroup.Group);
+    }
+
+    /*--------------------------------------------------------------------------------------------------------------------------------------
+                       TAB 2: BIOME PRESETS, SHARED WEATHER CYCLE GROUPS & 3D DIPPING LITHOLOGY
+    --------------------------------------------------------------------------------------------------------------------------------------*/
+    _buildWeatherAndGeologyTab(Content, Region)
+    {
+        // 1. 18 Biome + Physics + SatMap Presets Card
+        const PresetGroup = MakePropertyGroup('Biome & Erosion Preset Library', 'Sparkles', '18 PRESETS', true,
+            'Apply a physically calibrated landform + erosion + lithology + Gaea SatMap & Stamp suite to this terrain mask.');
+        const PresetOpts = [['Custom Stack Configuration', '__custom__']];
+        for (const P of TERRAIN_BIOME_PRESETS) PresetOpts.push([`${P.category.split(' ')[0]} · ${P.name}`, P.id]);
+        PresetGroup.Body.appendChild(MakeSelectRow('Active Biome Preset', PresetOpts, Region.presetId || '__custom__', Val =>
+        {
+            if (Val !== '__custom__') this.applyPresetToActiveRegion(Val);
+        }));
+        Content.appendChild(PresetGroup.Group);
+
+        // 2. Per-Mask (1-by-1) vs Shared Weather Cycle Group Card
+        const WGrpId = Region.weatherGroup || 'solo';
+        const LinkedPeers = WGrpId === 'solo'
+            ? [Region]
+            : (WGrpId === 'world-sync'
+                ? this.world.regions.filter(R => R.enabled)
+                : this.world.regions.filter(R => R.weatherGroup === WGrpId));
+
+        const LinkGroup = MakePropertyGroup('Per-Mask vs Shared Weather Cycle', 'Link', WGrpId.toUpperCase(), true,
+            'Run this terrain on an independent 1-by-1 weather clock (Solo), or link multiple terrain masks into the same Shared Weather Group so they experience identical seasonal storms & wind shifts together.');
+
+        LinkGroup.Body.appendChild(MakeSelectRow('Weather Link Channel', WEATHER_GROUP_OPTIONS, WGrpId, Val =>
+        {
+            this.pushUndoSnapshot();
+            Region.weatherGroup = Val;
+            this.map2D.requestRedraw();
+            this.refreshChrome();
+            this.rebuildInspector();
+        }));
+
+        const PeerWrap = MakeEl('div', 'weather-group-peers');
+        for (const Peer of LinkedPeers)
+        {
+            const Chip = MakeEl('button', 'peer-chip' + (WGrpId === 'solo' ? ' solo' : ''),
+                `${WGrpId === 'solo' ? '● Solo:' : '⇄ Linked:'} ${Peer.name}`);
+            Chip.type = 'button';
+            Chip.addEventListener('click', () => this._setRegionSelection(Peer.id, [Peer.id]));
+            PeerWrap.appendChild(Chip);
+        }
+        LinkGroup.Body.appendChild(PeerWrap);
+
+        const SimBtns = MakeEl('div', 'studio-btn-row');
+        const BtnSolo10 = MakeEl('button', 'button', 'Step Solo (+10)');
+        BtnSolo10.type = 'button';
+        BtnSolo10.title = 'Advance ONLY this terrain mask by +10 steps (1-by-1)';
+        BtnSolo10.addEventListener('click', () =>
+        {
+            const Prev = this.simTargetScope;
+            this.simTargetScope = 'solo';
+            this.stepWeatherSimulation(10, true);
+            this.simTargetScope = Prev;
+        });
+
+        const BtnGrp10 = MakeEl('button', 'button export-button', WGrpId === 'solo' ? 'Step Active (+15)' : `Step ${WGrpId.toUpperCase()} (+15)`);
+        BtnGrp10.type = 'button';
+        BtnGrp10.title = 'Advance all terrains linked in this Shared Weather Group synchronously';
+        BtnGrp10.addEventListener('click', () =>
+        {
+            const Prev = this.simTargetScope;
+            this.simTargetScope = 'group';
+            this.stepWeatherSimulation(15, true);
+            this.simTargetScope = Prev;
+        });
+        SimBtns.append(BtnSolo10, BtnGrp10);
+        LinkGroup.Body.appendChild(SimBtns);
+        Content.appendChild(LinkGroup.Group);
+
+        // 3. Climate Regime & Synoptic Wind Schedule Card
+        if (!Region.weatherSpec) Region.weatherSpec = { climateRegime: 'alpine-continental', windAzimuthDeg: 35, windSpeed: 0.65, windShiftMode: 'variable', rainMultiplier: 1.0, tempOffsetC: 0.0, stepsPerYear: 48 };
+        const Ws = Region.weatherSpec;
+        const TriggerWeather = () => { Region.dirty = true; this._scheduleDirtyRegionsEvaluation(); this._syncSimWeatherReadout(); };
+        const CommitWeather = () => { this._evaluateDirtyRegionsNow(); this.refreshChrome(); };
+
+        const ClimGroup = MakePropertyGroup('Seasonal Climate & Wind Regime', 'Snowflake', Ws.climateRegime.toUpperCase(), true);
+        ClimGroup.Body.appendChild(MakeSelectRow(
+            'Climate Regime',
+            CLIMATE_REGIMES.map(C => [C.label, C.id]),
+            Ws.climateRegime || 'alpine-continental',
+            Val => { Ws.climateRegime = Val; TriggerWeather(); CommitWeather(); this.rebuildInspector(); }
+        ));
+        ClimGroup.Body.appendChild(MakeSelectRow('Synoptic Wind Schedule', WIND_SHIFT_MODES, Ws.windShiftMode || 'variable', Val =>
+        {
+            Ws.windShiftMode = Val; TriggerWeather(); CommitWeather();
+        }));
+        ClimGroup.Body.appendChild(MakeSliderPillRow('Prevailing Wind Bearing', 0, 360, 1, Ws.windAzimuthDeg ?? 35, 0, '°', V => { Ws.windAzimuthDeg = V; TriggerWeather(); }, CommitWeather));
+        ClimGroup.Body.appendChild(MakeSliderPillRow('Mean Wind Velocity', 0.05, 1.6, 0.02, Ws.windSpeed ?? 0.65, 2, '×', V => { Ws.windSpeed = V; TriggerWeather(); }, CommitWeather));
+        ClimGroup.Body.appendChild(MakeSliderPillRow('Annual Precipitation', 0.1, 2.2, 0.05, Ws.rainMultiplier ?? 1.0, 2, '×', V => { Ws.rainMultiplier = V; TriggerWeather(); }, CommitWeather));
+        ClimGroup.Body.appendChild(MakeSliderPillRow('Temperature Offset', -14, 16, 0.5, Ws.tempOffsetC ?? 0.0, 1, '°C', V => { Ws.tempOffsetC = V; TriggerWeather(); }, CommitWeather));
+        Content.appendChild(ClimGroup.Group);
+
+        // 4. 3D Dipping Lithology & Fracture Network Card
+        if (!Region.lithology) Region.lithology = { rockHardness: 0.56, strataContrast: 0.72, strataFrequency: 9.0, dipDeg: 6.0, strikeDeg: 18.0, jointDensity: 0.58, carbonateSolubility: 0.38, ironMineral: 0.48 };
+        const Lith = Region.lithology;
+        const LithGroup = MakePropertyGroup('3D Dipping Lithology & Joints', 'Crack', 'BEDROCK', true,
+            'Governs differential caprock undercutting, canyon wall cuts, conjugate joint pitting, and karst solubility.');
+        LithGroup.Body.appendChild(MakeSliderPillRow('Bedrock Hardness', 0.08, 0.96, 0.02, Lith.rockHardness ?? 0.56, 2, 'h', V => { Lith.rockHardness = V; TriggerWeather(); }, CommitWeather));
+        LithGroup.Body.appendChild(MakeSliderPillRow('Caprock Strata Contrast', 0.0, 1.0, 0.02, Lith.strataContrast ?? 0.72, 2, 'w', V => { Lith.strataContrast = V; TriggerWeather(); }, CommitWeather));
+        LithGroup.Body.appendChild(MakeSliderPillRow('Stratigraphic Bed Count', 2, 24, 0.5, Lith.strataFrequency ?? 9.0, 1, 'bed', V => { Lith.strataFrequency = V; TriggerWeather(); }, CommitWeather));
+        LithGroup.Body.appendChild(MakeSliderPillRow('3D Bedding Dip Angle', 0, 35, 0.5, Lith.dipDeg ?? 6.0, 1, '°', V => { Lith.dipDeg = V; TriggerWeather(); }, CommitWeather));
+        LithGroup.Body.appendChild(MakeSliderPillRow('Bedding Strike Azimuth', 0, 180, 1, Lith.strikeDeg ?? 18, 0, '°', V => { Lith.strikeDeg = V; TriggerWeather(); }, CommitWeather));
+        LithGroup.Body.appendChild(MakeSliderPillRow('Tectonic Joint Density', 0.05, 1.0, 0.02, Lith.jointDensity ?? 0.58, 2, 'w', V => { Lith.jointDensity = V; TriggerWeather(); }, CommitWeather));
+        LithGroup.Body.appendChild(MakeSliderPillRow('Karst Carbonate Solubility', 0.02, 1.2, 0.02, Lith.carbonateSolubility ?? 0.38, 2, 'w', V => { Lith.carbonateSolubility = V; TriggerWeather(); }, CommitWeather));
+        LithGroup.Body.appendChild(MakeSliderPillRow('Fe / Mn Oxide Mineral', 0.0, 1.0, 0.02, Lith.ironMineral ?? 0.48, 2, 'w', V => { Lith.ironMineral = V; TriggerWeather(); }, CommitWeather));
+        Content.appendChild(LithGroup.Group);
+    }
+
+    /*--------------------------------------------------------------------------------------------------------------------------------------
+                         TAB 3: GAEA SATMAPS, GEOLOGICAL SURFACE STAMPS & 16-CHANNEL DATA MAP GALLERY
+    --------------------------------------------------------------------------------------------------------------------------------------*/
+    _buildGaeaTexturingTab(Content, Region)
+    {
+        if (!Region.texturing) Region.texturing = CreateDefaultTexturingConfig('alpine-granite', ['tectonic-cracks', 'talus-clasts']);
+        const Tex = Region.texturing;
+        if (!Region.runtime?.gaeaMaps) ComputeAllGaeaDataMaps(this.world, Region);
+
+        const RefreshTex = () =>
+        {
+            Region.meshDirty = true;
+            this.map2D.invalidateRegionPreview(Region.id);
+            this.map2D.requestRedraw();
+        };
+
+        // 1. 16-Channel Gaea Geomorphological Data Map Live Gallery
+        const ActivePreview = Tex.activeMapPreview || 'none';
+        const MapGroup = MakePropertyGroup('16 Gaea Geomorphological Data Maps', 'Palette', ActivePreview === 'none' ? 'SATMAP PBR' : ActivePreview.toUpperCase(), true,
+            'Click any derived map below to inspect it live in 3D & 2D (click again or click Composite to return to full SatMap + Stamp texturing).');
+
+        const ResetMapBtn = MakeEl('button', 'button' + (ActivePreview === 'none' ? ' export-button' : ''), 'Show Full Gaea SatMap + Stamps Composite');
+        ResetMapBtn.type = 'button';
+        ResetMapBtn.style.width = '100%';
+        ResetMapBtn.style.justifyContent = 'center';
+        ResetMapBtn.addEventListener('click', () =>
+        {
+            Tex.activeMapPreview = 'none';
+            RefreshTex();
+            this.rebuildInspector();
+        });
+        MapGroup.Body.appendChild(ResetMapBtn);
+
+        const MapGrid = MakeEl('div', 'gaea-map-grid');
+        for (const M of GAEA_DATA_MAPS)
+        {
+            const IsAct = ActivePreview === M.id;
+            const Card = MakeEl('button', 'gaea-map-card' + (IsAct ? ' active' : ''));
+            Card.type = 'button';
+            Card.title = `${M.label} — ${M.desc}`;
+            const Thumb = document.createElement('canvas');
+            Thumb.className = 'gaea-map-thumb';
+            RenderGaeaMapToCanvas(Region, M.id, true, Thumb);
+            Card.append(Thumb, MakeEl('span', '', M.shortLabel || M.label));
+            Card.addEventListener('click', () =>
+            {
+                Tex.activeMapPreview = (Tex.activeMapPreview === M.id) ? 'none' : M.id;
+                RefreshTex();
+                this.rebuildInspector();
+            });
+            MapGrid.appendChild(Card);
+        }
+        MapGroup.Body.appendChild(MapGrid);
+
+        // PNG & RGBA Splatmap Exporters!
+        const ExpRow = MakeEl('div', 'studio-btn-row');
+        const BtnMapPng = MakeEl('button', 'button', ActivePreview === 'none' ? 'Export Height .PNG' : `Export ${ActivePreview} .PNG`);
+        BtnMapPng.type = 'button';
+        BtnMapPng.addEventListener('click', () =>
+        {
+            const TargetMap = ActivePreview === 'none' ? 'height' : ActivePreview;
+            const Cvs = RenderGaeaMapToCanvas(Region, TargetMap, ActivePreview !== 'none');
+            if (Cvs) Cvs.toBlob(B => B && this._triggerDownload(B, `${Region.id}-${TargetMap}.png`));
+        });
+
+        const BtnAlbedoPng = MakeEl('button', 'button export-button', 'Export Albedo+Normal .PNG');
+        BtnAlbedoPng.type = 'button';
+        BtnAlbedoPng.addEventListener('click', () =>
+        {
+            const Out = RenderAlbedoAndNormalCanvases(this.world, Region);
+            if (!Out) return;
+            Out.albedo.toBlob(B => B && this._triggerDownload(B, `${Region.id}-albedo.png`));
+            setTimeout(() => Out.normal.toBlob(B => B && this._triggerDownload(B, `${Region.id}-normal.png`)), 180);
+        });
+
+        const BtnSplatPng = MakeEl('button', 'button', 'Export Splatmaps .PNG');
+        BtnSplatPng.type = 'button';
+        BtnSplatPng.addEventListener('click', () =>
+        {
+            const Out = RenderAlbedoAndNormalCanvases(this.world, Region);
+            if (!Out) return;
+            Out.splatA.toBlob(B => B && this._triggerDownload(B, `${Region.id}-splatA-bed-dep-tal-sand.png`));
+            setTimeout(() => Out.splatB.toBlob(B => B && this._triggerDownload(B, `${Region.id}-splatB-flow-pit-chem-snow.png`)), 180);
+        });
+        ExpRow.append(BtnMapPng, BtnAlbedoPng, BtnSplatPng);
+        MapGroup.Body.appendChild(ExpRow);
+        Content.appendChild(MapGroup.Group);
+
+        // 2. 12 Gaea SatMap Palette Themes Card
+        const SatGroup = MakePropertyGroup('Gaea SatMap Color Ramps', 'Palette', (Tex.satMapId || 'alpine-granite').toUpperCase(), true);
+        const SatGrid = MakeEl('div', 'satmap-grid');
+        for (const Theme of Object.values(GAEA_SATMAP_THEMES))
+        {
+            const Card = MakeEl('button', 'satmap-card' + (Tex.satMapId === Theme.id ? ' active' : ''));
+            Card.type = 'button';
+            const Swatch = MakeEl('div', 'satmap-swatch');
+            const Stops = Theme.rockRamp.map((C, Idx) =>
+            {
+                const R = Math.min(255, Math.round(Math.pow(C[0] * 1.6, 1 / 2.2) * 255));
+                const G = Math.min(255, Math.round(Math.pow(C[1] * 1.6, 1 / 2.2) * 255));
+                const B = Math.min(255, Math.round(Math.pow(C[2] * 1.6, 1 / 2.2) * 255));
+                return `rgb(${R},${G},${B}) ${Math.round((Idx / Math.max(1, Theme.rockRamp.length - 1)) * 100)}%`;
+            }).join(', ');
+            Swatch.style.background = `linear-gradient(90deg, ${Stops})`;
+            Card.append(Swatch, MakeEl('strong', '', Theme.label));
+            Card.addEventListener('click', () =>
+            {
+                Tex.satMapId = Theme.id;
+                Tex.activeMapPreview = 'none';
+                RefreshTex();
+                this.rebuildInspector();
+            });
+            SatGrid.appendChild(Card);
+        }
+        SatGroup.Body.appendChild(SatGrid);
+
+        SatGroup.Body.appendChild(MakeSliderPillRow('Strata Band Contrast', 0.0, 1.0, 0.02, Tex.strataVisibility ?? 0.64, 2, 'w', V => { Tex.strataVisibility = V; RefreshTex(); }));
+        SatGroup.Body.appendChild(MakeSliderPillRow('Cavity AO Darkening', 0.0, 1.0, 0.02, Tex.aoDarkening ?? 0.52, 2, 'w', V => { Tex.aoDarkening = V; RefreshTex(); }));
+        SatGroup.Body.appendChild(MakeSliderPillRow('Valley Moss / Riparian', 0.0, 1.0, 0.02, Tex.mossLine ?? 0.55, 2, 'w', V => { Tex.mossLine = V; RefreshTex(); }));
+        SatGroup.Body.appendChild(MakeSliderPillRow('Snowline Altitude Boost', -0.4, 0.8, 0.02, Tex.snowLineBoost ?? 0.0, 2, 'w', V => { Tex.snowLineBoost = V; RefreshTex(); }));
+        Content.appendChild(SatGroup.Group);
+
+        // 3. Geological Surface Stamps Stack (Albedo + Micro-Normal Perturbation!)
+        if (!Array.isArray(Tex.stamps)) Tex.stamps = [];
+        const StampGroup = MakePropertyGroup('Geological Surface Stamps', 'Stamp', `${Tex.stamps.length} STAMPS`, true,
+            'Procedural Gaea surface detail stamps masked by slope, strata, talus, sand, or flow — perturbs both albedo & 3D micro-normals.');
+
+        const AddStampRow = MakeEl('div', 'studio-btn-row');
+        const StampSelect = MakeEl('select', 'studio-select');
+        for (const St of Object.values(GAEA_SURFACE_STAMPS))
+        {
+            const Opt = document.createElement('option');
+            Opt.value = St.id;
+            Opt.textContent = `+ ${St.label}`;
+            StampSelect.appendChild(Opt);
+        }
+        const BtnAddStamp = MakeEl('button', 'button export-button', 'Add Stamp');
+        BtnAddStamp.type = 'button';
+        BtnAddStamp.style.flex = '0 0 auto';
+        BtnAddStamp.addEventListener('click', () =>
+        {
+            this.pushUndoSnapshot();
+            Tex.stamps.push(CreateStampLayer(StampSelect.value, { seed: Math.floor(1000 + Math.random() * 89000) }));
+            RefreshTex();
+            this.rebuildInspector();
+        });
+        AddStampRow.append(StampSelect, BtnAddStamp);
+        StampGroup.Body.appendChild(AddStampRow);
+
+        Tex.stamps.forEach((St, Idx) =>
+        {
+            const Card = MakeEl('div', 'stamp-card');
+            const Head = MakeEl('div', 'stamp-header');
+            const ToggleBtn = MakeEl('button', 'row-mini-btn' + (St.enabled !== false ? ' eye-on' : ''), ConstructGlyph(St.enabled !== false ? 'Eye' : 'EyeOff'));
+            ToggleBtn.type = 'button';
+            ToggleBtn.addEventListener('click', () => { St.enabled = St.enabled === false; RefreshTex(); this.rebuildInspector(); });
+
+            const DelBtn = MakeEl('button', 'row-mini-btn', ConstructGlyph('Trash'));
+            DelBtn.type = 'button';
+            DelBtn.addEventListener('click', () => { Tex.stamps.splice(Idx, 1); RefreshTex(); this.rebuildInspector(); });
+
+            Head.append(ToggleBtn, MakeEl('strong', '', St.name), DelBtn);
+            Card.appendChild(Head);
+
+            Card.appendChild(MakeSelectRow('Mask Driver Map', GAEA_DATA_MAPS.map(M => [M.label, M.id]), St.maskMap || 'slope', Val => { St.maskMap = Val; RefreshTex(); }));
+            Card.appendChild(MakeSliderPillRow('Detail Frequency', 0.3, 4.5, 0.05, St.scale ?? 1.0, 2, '×', V => { St.scale = V; RefreshTex(); }));
+            Card.appendChild(MakeSliderPillRow('Albedo Strength', 0.0, 1.4, 0.02, St.strength ?? 0.72, 2, 'w', V => { St.strength = V; RefreshTex(); }));
+            Card.appendChild(MakeSliderPillRow('3D Normal Bump', 0.0, 1.4, 0.02, St.bumpStrength ?? 0.65, 2, 'n', V => { St.bumpStrength = V; RefreshTex(); }));
+            StampGroup.Body.appendChild(Card);
+        });
+        Content.appendChild(StampGroup.Group);
     }
 
     /*--------------------------------------------------------------------------------------------------------------------------------------
@@ -1820,12 +2449,19 @@ class TerrainWorldStudioApp
     {
         let Frames = 0;
         let LastFpsT = performance.now();
+        let LastSimT = performance.now();
         const EnginePill = document.getElementById('engine-pill-text');
         const HudTris = document.getElementById('hud-tris-count');
         const StatMesh = document.getElementById('status-mesh');
 
         const Tick = Now =>
         {
+            if (this.simPlaying && Now - LastSimT >= 85)
+            {
+                LastSimT = Now;
+                this.stepWeatherSimulation(1, false);
+            }
+
             if (this.workspaceMode !== '3d') this.map2D.render();
             if (this.workspaceMode !== '2d') this.view3D.render(this.activeLayerId);
 
@@ -1837,7 +2473,7 @@ class TerrainWorldStudioApp
                 LastFpsT = Now;
                 const Tris = this.view3D.totalVisibleTriangles;
                 const Verts = this.view3D.totalVisibleVertices;
-                if (EnginePill) EnginePill.textContent = `THIN-SLAB · ${Fps} FPS`;
+                if (EnginePill) EnginePill.textContent = `${this.simPlaying ? 'SIM LIVE' : 'THIN-SLAB'} · ${Fps} FPS`;
                 if (HudTris) HudTris.textContent = `${(Tris / 1000).toFixed(1)}k`;
                 if (StatMesh) StatMesh.textContent = `Triangles: ${Tris.toLocaleString()} · Vertices: ${Verts.toLocaleString()}`;
             }

@@ -43,7 +43,19 @@ export const GlyphPaths = {
     Sparkles:  '<path d="M11 3.5l1.7 4.6 4.6 1.7-4.6 1.7L11 16.1l-1.7-4.6-4.6-1.7 4.6-1.7z"/><path d="M18.5 14.5v5M16 17h5"/>',
     Download:  '<path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>',
     Activity:  '<path d="M3 12h4l3-8 4 16 3-8h4"/>',
-    Arch:      '<path d="M4 20V12a8 8 0 0 1 16 0v8h-4v-7a4 4 0 0 0-8 0v7z"/>'
+    Arch:      '<path d="M4 20V12a8 8 0 0 1 16 0v8h-4v-7a4 4 0 0 0-8 0v7z"/>',
+    Droplet:   '<path d="M12 2.6S6 9.4 6 14.2a6 6 0 0 0 12 0C18 9.4 12 2.6 12 2.6z"/>',
+    Wind:      '<path d="M3 8h11.5a2.5 2.5 0 1 0-2.3-3.5M3 12h15.5a2.5 2.5 0 1 1-2.3 3.5M3 16h8.5a2.2 2.2 0 1 1-2 3"/>',
+    Snowflake: '<path d="M12 2v20M4.9 6l14.2 12M19.1 6 4.9 18M9.5 4 12 6.5 14.5 4M9.5 20 12 17.5 14.5 20"/>',
+    Crack:     '<path d="m13 2-3.5 6.5L14 11l-4.5 5.5L12 22"/><path d="m6 8 3.5 1.5M18 13l-4-2"/>',
+    Flask:     '<path d="M9 3h6M10 3v5.4L4.8 18.2A2 2 0 0 0 6.6 21h10.8a2 2 0 0 0 1.8-2.8L14 8.4V3"/><path d="M7.2 15h9.6"/>',
+    Landslide: '<path d="M3 20 10 9l5 5 6 6z"/><circle cx="15.5" cy="6.5" r="2"/><circle cx="19" cy="10.5" r="1.5"/>',
+    Play:      '<polygon points="6,4 20,12 6,20"/>',
+    Pause:     '<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>',
+    StepFwd:   '<polygon points="4,5 14,12 4,19"/><path d="M18 5v14"/>',
+    Palette:   '<path d="M12 3a9 9 0 1 0 0 18h1.5a2.5 2.5 0 0 0 0-5H12a2 2 0 0 1 0-4h4a5 5 0 0 0 5-5c0-2.2-4-4-9-4z"/><circle cx="7.5" cy="10.5" r="1.2"/><circle cx="10.5" cy="7.5" r="1.2"/><circle cx="15" cy="7.5" r="1.2"/>',
+    Stamp:     '<path d="M5 19h14M6 15h12v2H6z"/><path d="M9.5 15v-2.5a2.5 2.5 0 0 0-1-2A3.5 3.5 0 1 1 15.5 10.5a2.5 2.5 0 0 0-1 2V15"/>',
+    Link:      '<path d="M10 13a5 5 0 0 0 7.1 0l2.1-2.1a5 5 0 0 0-7.1-7.1L10.8 5"/><path d="M14 11a5 5 0 0 0-7.1 0l-2.1 2.1a5 5 0 0 0 7.1 7.1L13.2 19"/>'
 };
 
 export function ConstructGlyph(Name, ClassName = 'glyph')

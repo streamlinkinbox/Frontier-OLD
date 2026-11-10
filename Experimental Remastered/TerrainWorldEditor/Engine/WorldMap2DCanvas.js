@@ -7,6 +7,7 @@
 
 import { MASK_TILE_RES, TILE_WORLD_METERS } from './WorldMask2D.js';
 import { SampleCatmullRomPolyline, CreateTerrainLayer } from './TerrainLayerStack.js';
+import { EvaluateGaeaVertexAppearance, ComputeAllGaeaDataMaps } from './TerrainGaeaTexturing.js';
 
 const HANDLE_NAMES = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
 
@@ -726,9 +727,14 @@ export class WorldMap2DCanvas
     {
         const Rt = Region.runtime;
         if (!Rt || !Rt.hasLand) return null;
+        if (!Rt.gaeaMaps) ComputeAllGaeaDataMaps(this.world, Region);
 
         let Entry = this.regionCanvases.get(Region.id);
-        const ModeTag = this.showFalloffIn2D ? 'falloff' : 'relief';
+        const Diag = Region.texturing?.activeMapPreview || 'none';
+        const SatId = Region.texturing?.satMapId || 'default';
+        const StampCnt = Region.texturing?.stamps?.length || 0;
+        const StepTag = Rt.erosion?.totalSteps || 0;
+        const ModeTag = `${this.showFalloffIn2D ? 'falloff' : Diag}:${SatId}:${StampCnt}:${StepTag}`;
         if (Entry && Entry.nx === Rt.nx && Entry.nz === Rt.nz && Entry.mode === ModeTag)
         {
             return Entry.canvas;
@@ -741,10 +747,12 @@ export class WorldMap2DCanvas
         const Img = Ctx.createImageData(Rt.nx, Rt.nz);
         const Dst = Img.data;
         const Sea = this.world.seaLevel ?? 0.0;
+        const Bnds = Region.bounds;
 
         for (let Z = 0; Z < Rt.nz; ++Z)
         {
             const Zm = Math.max(0, Z - 1), Zp = Math.min(Rt.nz - 1, Z + 1);
+            const Wz = Bnds.z + Z * Rt.stepZ;
             for (let X = 0; X < Rt.nx; ++X)
             {
                 const I = Z * Rt.nx + X;
@@ -752,7 +760,6 @@ export class WorldMap2DCanvas
                 const D2 = Rt.sdf2D[I];
                 if (D2 > 0.0)
                 {
-                    // Subtle shallow coastal bathymetry halo right around shoreline
                     if (D2 < 55.0)
                     {
                         const Halo = (1.0 - D2 / 55.0) * 0.36;
@@ -771,11 +778,11 @@ export class WorldMap2DCanvas
                 const Xm = Math.max(0, X - 1), Xp = Math.min(Rt.nx - 1, X + 1);
                 const DhDx = (Rt.heights[Z * Rt.nx + Xp] - Rt.heights[Z * Rt.nx + Xm]) / ((Xp - Xm || 1) * Rt.stepX);
                 const DhDz = (Rt.heights[Zp * Rt.nx + X] - Rt.heights[Zm * Rt.nx + X]) / ((Zp - Zm || 1) * Rt.stepZ);
-                const Shade = 0.5 + 0.5 * ((-DhDx * 0.62 - DhDz * 0.48 + 0.62) / Math.hypot(DhDx, DhDz, 1.0));
+                const InvN = 1.0 / Math.hypot(DhDx, 1.0, DhDz);
+                const Shade = 0.5 + 0.5 * ((-DhDx * 0.62 - DhDz * 0.48 + 0.62) * InvN);
 
                 if (this.showFalloffIn2D)
                 {
-                    // Heatmap of active layer's Boundary Falloff: cool cyan at soft edge -> warm gold/coral at strong center!
                     const W = Rt.falloffMap[I];
                     Dst[P] = Math.round((38 + 212 * W) * (0.72 + 0.35 * Shade));
                     Dst[P + 1] = Math.round((95 + 105 * Math.sin(W * Math.PI)) * (0.72 + 0.35 * Shade));
@@ -784,46 +791,34 @@ export class WorldMap2DCanvas
                     continue;
                 }
 
+                const Wx = Bnds.x + X * Rt.stepX;
                 const H = Rt.heights[I] - Sea;
-                const Contour = (Math.abs(((H % 30.0) + 30.0) % 30.0) < 1.6) ? 0.84 : 1.0;
-                const Lit = (0.58 + 0.52 * Shade) * Contour;
+                const Contour = (Math.abs(((H % 30.0) + 30.0) % 30.0) < 1.5) ? 0.85 : 1.0;
 
-                let R, G, B;
-                if (Rt.waterChannel[I] > 0.16)
-                {
-                    R = 46; G = 128; B = 152;
-                }
-                else if (H < 8.0)
-                {
-                    R = 148; G = 138; B = 104;
-                }
-                else if (H < 75.0)
-                {
-                    R = 76; G = 104; B = 68;
-                }
-                else if (H < 165.0)
-                {
-                    R = 116; G = 106; B = 78;
-                }
-                else if (H < 225.0)
-                {
-                    R = 132; G = 128; B = 124;
-                }
-                else
-                {
-                    R = 205; G = 208; B = 214;
-                }
+                const App = EvaluateGaeaVertexAppearance(this.world, Region, I, Wx, Rt.heights[I], Wz, [-DhDx * InvN, InvN, -DhDz * InvN]);
+                // Gamma-encode linear Gaea vertex color for crisp 2D cartographic relief
+                let R = Math.pow(Math.max(0.0, App.color[0]), 1.0 / 2.15) * 255.0;
+                let G = Math.pow(Math.max(0.0, App.color[1]), 1.0 / 2.15) * 255.0;
+                let B = Math.pow(Math.max(0.0, App.color[2]), 1.0 / 2.15) * 255.0;
 
-                // Crisp bright coastline pixel
-                if (D2 > -Math.max(Rt.stepX, Rt.stepZ) * 1.15)
+                const IsDiag = Diag && Diag !== 'none';
+                const Lit = IsDiag ? (0.78 + 0.32 * Shade) : ((0.56 + 0.62 * Shade) * Contour);
+
+                // Overlay non-flooding incised river/lake water threads when viewing SatMap relief
+                const OpenWater = !IsDiag && ((Rt.erosion && Rt.erosion.waterDepth[I] > 0.06 && Rt.erosion.flowAccum[I] > 0.16) || Rt.waterChannel[I] > 0.22);
+                if (OpenWater)
+                {
+                    R = 44; G = 162; B = 186;
+                }
+                else if (!IsDiag && D2 > -Math.max(Rt.stepX, Rt.stepZ) * 1.15)
                 {
                     R = 232; G = 212; B = 158;
                 }
 
-                Dst[P] = Math.min(255, Math.round(R * Lit));
+                Dst[P]     = Math.min(255, Math.round(R * Lit));
                 Dst[P + 1] = Math.min(255, Math.round(G * Lit));
                 Dst[P + 2] = Math.min(255, Math.round(B * Lit));
-                Dst[P + 3] = 238;
+                Dst[P + 3] = 240;
             }
         }
 
@@ -1158,6 +1153,28 @@ export class WorldMap2DCanvas
 
         Ctx.fillStyle = !Region.enabled ? '#86919c' : (IsPrimary ? '#f3d497' : '#d8dee6');
         Ctx.fillText(Label, X0 + 8, PillY + 14);
+
+        // Weather Group + Wind Azimuth Badge right beside the Terrain Bounds Header Pill
+        const WGrp = Region.weatherGroup || 'solo';
+        const IsShared = WGrp !== 'solo';
+        const WGrpShort = WGrp === 'solo' ? 'SOLO' : WGrp.replace('group-', 'GRP-').replace('world-sync', 'WORLD').toUpperCase();
+        const WindDeg = Math.round(((Region.weatherSpec?.windAzimuthDeg ?? 35) % 360 + 360) % 360);
+        const SimSteps = Region.runtime?.erosion?.totalSteps || 0;
+        const WBadgeText = `${IsShared ? '⇄ ' : ''}${WGrpShort} · ${WindDeg}°${SimSteps > 0 ? ` · ${SimSteps}st` : ''}`;
+        Ctx.font = '600 10px "JetBrains Mono", monospace';
+        const WBadgeW = Ctx.measureText(WBadgeText).width + 14;
+        const WBadgeX = X0 + TextW + 22;
+        if (WBadgeX + WBadgeW <= X1 + 90)
+        {
+            Ctx.fillStyle = IsShared ? 'rgba(18, 36, 48, 0.92)' : 'rgba(20, 24, 30, 0.88)';
+            Ctx.strokeStyle = IsShared ? 'rgba(90, 200, 250, 0.62)' : 'rgba(255, 255, 255, 0.16)';
+            Ctx.beginPath();
+            Ctx.roundRect(WBadgeX, PillY + 1, WBadgeW, PillH - 2, 4);
+            Ctx.fill();
+            Ctx.stroke();
+            Ctx.fillStyle = IsShared ? '#7dd3fc' : '#a3adb8';
+            Ctx.fillText(WBadgeText, WBadgeX + 7, PillY + 13.5);
+        }
 
         // 8 Resize Handles when in Select/Bounds mode and selected
         if (this.tool === 'select' && IsSelected && !Region.locked)

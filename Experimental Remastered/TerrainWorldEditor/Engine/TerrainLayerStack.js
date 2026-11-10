@@ -5,6 +5,22 @@
 // Real-Time SDF Sculpting (2.5D + True 3D Overhang/Cave SDF), Thin-Slab Triangle Mesher, and 3 Demo Open-World Masks.
 
 import { ComputeRegionMaskSdf2D, MakeTerrainUid } from './WorldMask2D.js';
+import {
+    CreateErosionFieldState,
+    SyncSolidHeightsFromErosion,
+    EvaluateSeasonalWeatherForcing,
+    StepHydraulicErosion,
+    StepPittingWeathering,
+    StepAeolianWindErosion,
+    StepRockfallTalusErosion,
+    StepChemicalWeathering,
+    StepFullSeasonalSuite
+} from './TerrainErosionPhysics.js';
+import {
+    CreateDefaultTexturingConfig,
+    ComputeAllGaeaDataMaps,
+    EvaluateGaeaVertexAppearance
+} from './TerrainGaeaTexturing.js';
 
 export const Clamp = (V, Lo, Hi) => (V < Lo ? Lo : V > Hi ? Hi : V);
 export const Mix = (A, B, T) => A + (B - A) * T;
@@ -279,14 +295,34 @@ export function EvaluateBoundaryFalloff(InlandDistM, BoxEdgeDistM, FalloffSpec)
                                         COMPOSABLE LAYER STACK SPECIFICATION & FACTORY
 ==========================================================================================================================================*/
 export const LAYER_TYPE_META = {
-    multifractal: { label: 'Hybrid Multifractal', badge: 'FRACTAL', glyph: 'Mountain', accent: '#e8c27a' },
-    ridged:       { label: 'Ridged Mountain Noise', badge: 'RIDGE', glyph: 'Activity', accent: '#f0935b' },
-    voronoi:      { label: 'Voronoi / Mesa Blocks', badge: 'CELLULAR', glyph: 'Boxes', accent: '#5ac8fa' },
-    billow:       { label: 'Billow Hills & Dunes', badge: 'FOLDED', glyph: 'Wind', accent: '#a3d977' },
-    terrace:      { label: 'Terrace & Strata', badge: 'STRATA', glyph: 'Layers', accent: '#d6a2e8' },
-    spline:       { label: 'Spline Landform', badge: 'SPLINE', glyph: 'Spline', accent: '#3ec46d' },
-    sculpt:       { label: 'SDF Sculpt Layer', badge: 'SCULPT', glyph: 'Brush', accent: '#ff7b7b' }
+    multifractal:        { label: 'Hybrid Multifractal',        badge: 'FRACTAL',  glyph: 'Mountain',  accent: '#e8c27a', category: 'landform' },
+    ridged:              { label: 'Ridged Mountain Noise',      badge: 'RIDGE',    glyph: 'Activity',  accent: '#f0935b', category: 'landform' },
+    voronoi:             { label: 'Voronoi / Mesa Blocks',      badge: 'CELLULAR', glyph: 'Boxes',     accent: '#5ac8fa', category: 'landform' },
+    billow:              { label: 'Billow Hills & Dunes',       badge: 'FOLDED',   glyph: 'Wind',      accent: '#a3d977', category: 'landform' },
+    terrace:             { label: 'Terrace & Strata',           badge: 'STRATA',   glyph: 'Layers',    accent: '#d6a2e8', category: 'landform' },
+    spline:              { label: 'Spline Landform',            badge: 'SPLINE',   glyph: 'Spline',    accent: '#3ec46d', category: 'spline'   },
+    sculpt:              { label: 'SDF Sculpt Layer',           badge: 'SCULPT',   glyph: 'Brush',     accent: '#ff7b7b', category: 'sculpt'   },
+    'erosion-hydraulic': { label: 'Hydraulic & Stream Erosion', badge: 'FLUVIAL',  glyph: 'Droplet',   accent: '#5ac8fa', category: 'erosion'  },
+    'erosion-pitting':   { label: 'Frost & Thermal Pitting',    badge: 'PITTING',  glyph: 'Crack',     accent: '#c084fc', category: 'erosion'  },
+    'erosion-wind':      { label: 'Wind Dunes & Canyon Cuts',   badge: 'AEOLIAN',  glyph: 'Wind',      accent: '#f5b962', category: 'erosion'  },
+    'erosion-rockfall':  { label: 'Cliff Rockfall & Talus',     badge: 'ROCKFALL', glyph: 'Landslide', accent: '#f08a5a', category: 'erosion'  },
+    'erosion-chemical':  { label: 'Chemical Karst & Varnish',   badge: 'CHEMICAL', glyph: 'Flask',     accent: '#3ec46d', category: 'erosion'  },
+    'erosion-seasonal':  { label: '4-Season Climate Erosion',   badge: 'SEASONAL', glyph: 'Snowflake', accent: '#7dd3fc', category: 'erosion'  }
 };
+
+export const EROSION_LAYER_TYPES = [
+    'erosion-hydraulic',
+    'erosion-pitting',
+    'erosion-wind',
+    'erosion-rockfall',
+    'erosion-chemical',
+    'erosion-seasonal'
+];
+
+export function IsErosionLayerType(Type)
+{
+    return EROSION_LAYER_TYPES.includes(Type);
+}
 
 export function CreateTerrainLayer(Type = 'multifractal', Overrides = {})
 {
@@ -382,6 +418,122 @@ export function CreateTerrainLayer(Type = 'multifractal', Overrides = {})
             bankSmooth: Overrides.bankSmooth ?? 0.62,
             meander: Overrides.meander ?? 0.14,
             points: (Overrides.points || []).map(P => P.slice())
+        };
+    }
+    if (Type === 'erosion-hydraulic')
+    {
+        return {
+            ...Base,
+            falloff: {
+                mode: Overrides.falloff?.mode ?? 'none',
+                distance: Overrides.falloff?.distance ?? 120.0,
+                edgeFloor: Overrides.falloff?.edgeFloor ?? 1.0,
+                points: (Overrides.falloff?.points || FALLOFF_CURVE_DEFAULT_POINTS).map(P => P.slice())
+            },
+            iterations: Overrides.iterations ?? 18,
+            rainRate: Overrides.rainRate ?? 0.58,
+            erosionRate: Overrides.erosionRate ?? 0.68,
+            depositionRate: Overrides.depositionRate ?? 0.54,
+            evaporation: Overrides.evaporation ?? 0.24,
+            infiltration: Overrides.infiltration ?? 0.14,
+            channelFocus: Overrides.channelFocus ?? 0.72,
+            dropletBoost: Overrides.dropletBoost ?? 0.58
+        };
+    }
+    if (Type === 'erosion-pitting')
+    {
+        return {
+            ...Base,
+            falloff: {
+                mode: Overrides.falloff?.mode ?? 'none',
+                distance: Overrides.falloff?.distance ?? 120.0,
+                edgeFloor: Overrides.falloff?.edgeFloor ?? 1.0,
+                points: (Overrides.falloff?.points || FALLOFF_CURVE_DEFAULT_POINTS).map(P => P.slice())
+            },
+            iterations: Overrides.iterations ?? 12,
+            frostIntensity: Overrides.frostIntensity ?? 0.68,
+            thermalIntensity: Overrides.thermalIntensity ?? 0.56,
+            pitScale: Overrides.pitScale ?? 0.62,
+            jointExploit: Overrides.jointExploit ?? 0.72,
+            tafoniStrength: Overrides.tafoniStrength ?? 0.45,
+            sunAzimuthDeg: Overrides.sunAzimuthDeg ?? 145.0,
+            sunElevDeg: Overrides.sunElevDeg ?? 40.0
+        };
+    }
+    if (Type === 'erosion-wind')
+    {
+        return {
+            ...Base,
+            falloff: {
+                mode: Overrides.falloff?.mode ?? 'none',
+                distance: Overrides.falloff?.distance ?? 120.0,
+                edgeFloor: Overrides.falloff?.edgeFloor ?? 1.0,
+                points: (Overrides.falloff?.points || FALLOFF_CURVE_DEFAULT_POINTS).map(P => P.slice())
+            },
+            iterations: Overrides.iterations ?? 14,
+            windSpeed: Overrides.windSpeed ?? 0.72,
+            windAzimuthDeg: Overrides.windAzimuthDeg ?? 35.0,
+            sandSupply: Overrides.sandSupply ?? 0.52,
+            duneStrength: Overrides.duneStrength ?? 0.66,
+            canyonAbrasion: Overrides.canyonAbrasion ?? 0.76,
+            strataUndercut: Overrides.strataUndercut ?? 0.78,
+            useWeatherWind: Overrides.useWeatherWind !== false
+        };
+    }
+    if (Type === 'erosion-rockfall')
+    {
+        return {
+            ...Base,
+            falloff: {
+                mode: Overrides.falloff?.mode ?? 'none',
+                distance: Overrides.falloff?.distance ?? 120.0,
+                edgeFloor: Overrides.falloff?.edgeFloor ?? 1.0,
+                points: (Overrides.falloff?.points || FALLOFF_CURVE_DEFAULT_POINTS).map(P => P.slice())
+            },
+            iterations: Overrides.iterations ?? 12,
+            criticalSlopeDeg: Overrides.criticalSlopeDeg ?? 51.0,
+            talusReposeDeg: Overrides.talusReposeDeg ?? 34.0,
+            calvingRate: Overrides.calvingRate ?? 0.66,
+            bulkingFactor: Overrides.bulkingFactor ?? 1.15,
+            runoutMobility: Overrides.runoutMobility ?? 0.68
+        };
+    }
+    if (Type === 'erosion-chemical')
+    {
+        return {
+            ...Base,
+            falloff: {
+                mode: Overrides.falloff?.mode ?? 'none',
+                distance: Overrides.falloff?.distance ?? 120.0,
+                edgeFloor: Overrides.falloff?.edgeFloor ?? 1.0,
+                points: (Overrides.falloff?.points || FALLOFF_CURVE_DEFAULT_POINTS).map(P => P.slice())
+            },
+            iterations: Overrides.iterations ?? 10,
+            karstRate: Overrides.karstRate ?? 0.64,
+            sinkholeStrength: Overrides.sinkholeStrength ?? 0.54,
+            rillenStrength: Overrides.rillenStrength ?? 0.56,
+            stainIntensity: Overrides.stainIntensity ?? 0.68,
+            waterlineHeight: Overrides.waterlineHeight ?? 2.2
+        };
+    }
+    if (Type === 'erosion-seasonal')
+    {
+        return {
+            ...Base,
+            falloff: {
+                mode: Overrides.falloff?.mode ?? 'none',
+                distance: Overrides.falloff?.distance ?? 120.0,
+                edgeFloor: Overrides.falloff?.edgeFloor ?? 1.0,
+                points: (Overrides.falloff?.points || FALLOFF_CURVE_DEFAULT_POINTS).map(P => P.slice())
+            },
+            iterations: Overrides.iterations ?? 20,
+            hydraulicStrength: Overrides.hydraulicStrength ?? 0.72,
+            frostStrength: Overrides.frostStrength ?? 0.68,
+            thermalStrength: Overrides.thermalStrength ?? 0.45,
+            windStrength: Overrides.windStrength ?? 0.52,
+            rockfallStrength: Overrides.rockfallStrength ?? 0.65,
+            chemicalStrength: Overrides.chemicalStrength ?? 0.36,
+            snowStrength: Overrides.snowStrength ?? 0.62
         };
     }
     // 'sculpt'
@@ -544,8 +696,17 @@ export function EvaluateTerrainRegion(World, Region, PreviewLayerIdForFalloff = 
         }
     }
 
+    // Ensure region has a default Gaea texturing config
+    if (!Region.texturing)
+    {
+        Region.texturing = CreateDefaultTexturingConfig('alpine-granite', ['tectonic-cracks', 'talus-clasts']);
+    }
+
     // 3. Evaluate Composable Layer Stack bottom-to-top!
     const RefSpan = Math.max(400.0, Math.min(B.width, B.depth));
+    let ErosionState = null;
+    let LastSyncedHeights = null;
+
     for (let LIdx = 0; LIdx < Region.stack.length; ++LIdx)
     {
         const Layer = Region.stack[LIdx];
@@ -558,6 +719,91 @@ export function EvaluateTerrainRegion(World, Region, PreviewLayerIdForFalloff = 
         const Type = Layer.type;
         const Seed = (Layer.seed | 0) || 4029;
         const Combine = Layer.combine || 'add';
+
+        // --- Physically-Based Geomorphology Erosion Layer Dispatch ---
+        if (IsErosionLayerType(Type))
+        {
+            const MaskWeights = new Float32Array(Count);
+            let ActiveCells = 0;
+            for (let Z = 0; Z < Nz; ++Z)
+            {
+                const Wz = B.z + Z * StepZ;
+                const BoxDz = Math.min(Wz - B.z, B.z + B.depth - Wz);
+                const Row = Z * Nx;
+                for (let X = 0; X < Nx; ++X)
+                {
+                    const Idx = Row + X;
+                    const D2 = Sdf2D[Idx];
+                    if (D2 > StepX * 0.6) continue;
+                    const Wx = B.x + X * StepX;
+                    const BoxEdgeDist = Math.min(BoxDz, Wx - B.x, B.x + B.width - Wx);
+                    const InlandDist = Math.max(0.0, -D2);
+                    const FallW = EvaluateBoundaryFalloff(InlandDist, BoxEdgeDist, Layer.falloff);
+                    if (RecordFalloff) FalloffPreview[Idx] = FallW;
+                    let MaskW = FallW * Opacity;
+                    if (Layer.heightMask?.enabled)
+                    {
+                        const Hm = Layer.heightMask;
+                        const CurH = Heights[Idx];
+                        MaskW *= Smoothstep(Hm.minElev - 15.0, Hm.minElev + 5.0, CurH) *
+                                 (1.0 - Smoothstep(Hm.maxElev - 5.0, Hm.maxElev + 15.0, CurH));
+                    }
+                    MaskWeights[Idx] = MaskW;
+                    if (MaskW > 1e-4) ActiveCells++;
+                }
+            }
+            if (ActiveCells === 0) continue;
+
+            if (!ErosionState)
+            {
+                ErosionState = CreateErosionFieldState(Nx, Nz, Heights, SlabBottom);
+            }
+            else if (LastSyncedHeights)
+            {
+                // Propagate any intervening landform / spline / sculpt elevation edits into bedrock
+                for (let I = 0; I < Count; ++I)
+                {
+                    const Diff = Heights[I] - LastSyncedHeights[I];
+                    if (Math.abs(Diff) > 1e-5) ErosionState.bedrock[I] = Math.max(SlabBottom + 0.35, ErosionState.bedrock[I] + Diff);
+                }
+            }
+
+            // Seed any existing river/lake spline channels into water depth for physically coupled fluvial routing
+            for (let I = 0; I < Count; ++I)
+            {
+                if (WaterChannel[I] > 0.15)
+                {
+                    ErosionState.waterDepth[I] = Math.max(ErosionState.waterDepth[I], WaterChannel[I] * 0.45);
+                }
+            }
+
+            const Iters = Clamp(Math.round(Number(Layer.iterations) || 12), 1, 140);
+            const BaseCtx = {
+                nx: Nx, nz: Nz, stepX: StepX, stepZ: StepZ,
+                bounds: B, sdf2D: Sdf2D, seaLevel: SeaLevel,
+                maxRelief: Number(Region.maxRelief) || 240.0,
+                lithology: Region.lithology,
+                maskWeights: MaskWeights,
+                seed: Seed
+            };
+
+            for (let S = 0; S < Iters; ++S)
+            {
+                const Weather = EvaluateSeasonalWeatherForcing(Region.weatherSpec || {}, ErosionState.totalSteps);
+                const StepCtx = { ...BaseCtx, weather: Weather, seed: Seed + S * 37 };
+                if (Type === 'erosion-hydraulic') StepHydraulicErosion(ErosionState, StepCtx, Layer);
+                else if (Type === 'erosion-pitting') StepPittingWeathering(ErosionState, StepCtx, Layer);
+                else if (Type === 'erosion-wind') StepAeolianWindErosion(ErosionState, StepCtx, Layer);
+                else if (Type === 'erosion-rockfall') StepRockfallTalusErosion(ErosionState, StepCtx, Layer);
+                else if (Type === 'erosion-chemical') StepChemicalWeathering(ErosionState, StepCtx, Layer);
+                else if (Type === 'erosion-seasonal') StepFullSeasonalSuite(ErosionState, StepCtx, Layer);
+                ErosionState.totalSteps = (ErosionState.totalSteps || 0) + 1;
+            }
+
+            SyncSolidHeightsFromErosion(ErosionState, Heights);
+            LastSyncedHeights = new Float32Array(Heights);
+            continue;
+        }
 
         // Precompute spline polyline & bounding box when evaluating a Spline Landform layer
         let Poly = null;
@@ -790,6 +1036,18 @@ export function EvaluateTerrainRegion(World, Region, PreviewLayerIdForFalloff = 
         }
     }
 
+    // Merge channelized stream water into WaterChannel for river/lake continuity
+    if (ErosionState)
+    {
+        for (let I = 0; I < Count; ++I)
+        {
+            if (ErosionState.waterDepth[I] > 0.04)
+            {
+                WaterChannel[I] = Math.max(WaterChannel[I], Clamp(ErosionState.waterDepth[I] * 0.45, 0.0, 1.0));
+            }
+        }
+    }
+
     // Compute peak height & land area telemetry
     let MaxHeight = SlabBottom;
     for (let I = 0; I < Count; ++I)
@@ -804,10 +1062,108 @@ export function EvaluateTerrainRegion(World, Region, PreviewLayerIdForFalloff = 
         slabBottom: SlabBottom, baseTop: BaseTop,
         coverage: MaskCov, sdf2D: Sdf2D, heights: Heights,
         falloffMap: FalloffPreview, waterChannel: WaterChannel,
+        erosion: ErosionState,
+        gaeaMaps: null,
         hasLand: true, maxHeight: MaxHeight, landAreaKm2: LandAreaKm2
     };
+    ComputeAllGaeaDataMaps(World, Region);
     Region.dirty = false;
     return Region.runtime;
+}
+
+/**
+ * Advances live interactive erosion & seasonal climate on `Region` by `Steps` steps!
+ * - Can be driven individually (`Solo 1-by-1`) or synchronously across a `Shared Weather Group` (`WeatherForcing` supplied by `WeatherSimulationCoordinator`).
+ * - Executes all enabled erosion layers in `Region.stack` (1 sub-pass each per step), or falls back to `StepFullSeasonalSuite` if none exist yet.
+ */
+export function StepRegionLiveSimulation(World, Region, WeatherForcing = null, Steps = 1)
+{
+    if (!Region || Region.enabled === false) return null;
+    if (Region.dirty || !Region.runtime)
+    {
+        EvaluateTerrainRegion(World, Region);
+    }
+    const Rt = Region.runtime;
+    if (!Rt || !Rt.hasLand) return Rt;
+
+    const Nx = Rt.nx, Nz = Rt.nz, Count = Nx * Nz;
+    if (!Rt.erosion)
+    {
+        Rt.erosion = CreateErosionFieldState(Nx, Nz, Rt.heights, Rt.slabBottom);
+    }
+
+    const ErosionLayers = Region.stack.filter(L => L && L.enabled !== false && IsErosionLayerType(L.type));
+    const SeaLevel = World.seaLevel ?? 0.0;
+    const BaseCtx = {
+        nx: Nx, nz: Nz, stepX: Rt.stepX, stepZ: Rt.stepZ,
+        bounds: Region.bounds, sdf2D: Rt.sdf2D, seaLevel: SeaLevel,
+        maxRelief: Number(Region.maxRelief) || 240.0,
+        lithology: Region.lithology,
+        maskWeights: null,
+        seed: Region.seed || 4029
+    };
+
+    const Total = Clamp(Steps | 0, 1, 64);
+    let LatestWeather = WeatherForcing;
+
+    for (let S = 0; S < Total; ++S)
+    {
+        const StepIdx = Rt.erosion.totalSteps || 0;
+        const Weather = WeatherForcing || EvaluateSeasonalWeatherForcing(Region.weatherSpec || {}, StepIdx);
+        LatestWeather = Weather;
+        const StepCtx = { ...BaseCtx, weather: Weather, seed: (Region.seed || 4029) + StepIdx * 41 };
+
+        if (ErosionLayers.length > 0)
+        {
+            for (const Layer of ErosionLayers)
+            {
+                if (Layer.type === 'erosion-hydraulic') StepHydraulicErosion(Rt.erosion, StepCtx, Layer);
+                else if (Layer.type === 'erosion-pitting') StepPittingWeathering(Rt.erosion, StepCtx, Layer);
+                else if (Layer.type === 'erosion-wind') StepAeolianWindErosion(Rt.erosion, StepCtx, Layer);
+                else if (Layer.type === 'erosion-rockfall') StepRockfallTalusErosion(Rt.erosion, StepCtx, Layer);
+                else if (Layer.type === 'erosion-chemical') StepChemicalWeathering(Rt.erosion, StepCtx, Layer);
+                else if (Layer.type === 'erosion-seasonal') StepFullSeasonalSuite(Rt.erosion, StepCtx, Layer);
+            }
+        }
+        else
+        {
+            StepFullSeasonalSuite(Rt.erosion, StepCtx, {
+                hydraulicStrength: 0.72,
+                frostStrength: 0.65,
+                thermalStrength: 0.45,
+                windStrength: 0.50,
+                rockfallStrength: 0.65,
+                chemicalStrength: 0.35,
+                snowStrength: 0.58
+            });
+        }
+
+        Rt.erosion.totalSteps = StepIdx + 1;
+    }
+
+    SyncSolidHeightsFromErosion(Rt.erosion, Rt.heights);
+
+    let MaxHeight = Rt.slabBottom;
+    for (let I = 0; I < Count; ++I)
+    {
+        if (Rt.sdf2D[I] <= 0.0 && Rt.heights[I] > MaxHeight) MaxHeight = Rt.heights[I];
+        if (Rt.erosion.waterDepth[I] > 0.04)
+        {
+            Rt.waterChannel[I] = Math.max(Rt.waterChannel[I], Clamp(Rt.erosion.waterDepth[I] * 0.45, 0.0, 1.0));
+        }
+    }
+    Rt.maxHeight = MaxHeight;
+    ComputeAllGaeaDataMaps(World, Region);
+    Region.meshDirty = true;
+    return LatestWeather;
+}
+
+export function ResetRegionLiveSimulation(World, Region)
+{
+    if (!Region) return;
+    Region.dirty = true;
+    Region.meshDirty = true;
+    EvaluateTerrainRegion(World, Region);
 }
 
 function EnsureSculptBufferMatches(Layer, Nx, Nz)
@@ -1008,6 +1364,11 @@ export function ExtractRegionTriangleMesh(World, Region, Options = {})
     const SeaLevel = World.seaLevel ?? 0.0;
     const SkirtMaxD = Math.max(StepX, StepZ) * 1.55;
     const IncludeUnderside = Options.includeUnderside !== false;
+    const UseGaeaTexturing = Options.rawLithology !== true;
+    if (UseGaeaTexturing && !Rt.gaeaMaps)
+    {
+        ComputeAllGaeaDataMaps(World, Region);
+    }
 
     // Determine active vertices inside mask + skirt
     const TopVertIdx = new Int32Array(Nx * Nz);
@@ -1039,14 +1400,24 @@ export function ExtractRegionTriangleMesh(World, Region, Options = {})
             const NxVal = -DhDx * InvLen, NyVal = InvLen, NzVal = -DhDz * InvLen;
             const SlopeDeg = Math.acos(Clamp(NyVal, -1.0, 1.0)) * 57.2957795;
 
-            const Litho = ComputeFlatLithologyColor(H, SeaLevel, SlopeDeg, Rt.waterChannel[Cell], D2, SlabBottom);
-
             const VId = PosList.length / 3;
             TopVertIdx[Cell] = VId;
             PosList.push(Wx, H, Wz);
-            NormList.push(NxVal, NyVal, NzVal);
-            ColList.push(Litho[0], Litho[1], Litho[2]);
-            AuxList.push(Rt.falloffMap[Cell], Clamp(SlopeDeg / 90.0, 0.0, 1.0));
+
+            if (UseGaeaTexturing && D2 <= StepX * 0.85)
+            {
+                const App = EvaluateGaeaVertexAppearance(World, Region, Cell, Wx, H, Wz, [NxVal, NyVal, NzVal]);
+                NormList.push(App.normal[0], App.normal[1], App.normal[2]);
+                ColList.push(App.color[0], App.color[1], App.color[2]);
+                AuxList.push(App.aux0, App.aux1);
+            }
+            else
+            {
+                const Litho = ComputeFlatLithologyColor(H, SeaLevel, SlopeDeg, Rt.waterChannel[Cell], D2, SlabBottom);
+                NormList.push(NxVal, NyVal, NzVal);
+                ColList.push(Litho[0], Litho[1], Litho[2]);
+                AuxList.push(Rt.falloffMap[Cell], Clamp(SlopeDeg / 90.0, 0.0, 1.0) * 0.25);
+            }
         }
     }
 
@@ -1467,6 +1838,29 @@ export function SeedThreeDemoTerrains(World)
         id: 'terrain-highland',
         name: 'Terrain 01 · Highland Massif',
         maskLayerId: Mask1.id,
+        presetId: 'alpine-granite-peaks',
+        weatherGroup: 'group-a',
+        weatherSpec: {
+            climateRegime: 'alpine-continental',
+            windAzimuthDeg: 34.0,
+            windSpeed: 0.65,
+            windShiftMode: 'variable',
+            rainMultiplier: 1.05,
+            tempOffsetC: -2.0,
+            stepsPerYear: 48,
+            seed: 4029
+        },
+        lithology: {
+            rockHardness: 0.68,
+            strataContrast: 0.56,
+            strataFrequency: 8.5,
+            dipDeg: 10.0,
+            strikeDeg: 28.0,
+            jointDensity: 0.72,
+            carbonateSolubility: 0.18,
+            ironMineral: 0.36
+        },
+        texturing: CreateDefaultTexturingConfig('alpine-granite', ['tectonic-cracks', 'talus-clasts', 'alluvial-cobbles']),
         color: '#e8c27a',
         bounds: Bounds1,
         resolution: 148,
@@ -1511,6 +1905,19 @@ export function SeedThreeDemoTerrains(World)
                     [-680, -350],
                     [-430, -280]
                 ]
+            }),
+            CreateTerrainLayer('erosion-seasonal', {
+                name: '4-Season Alpine Fluvial & Frost',
+                iterations: 16,
+                hydraulicStrength: 0.78,
+                frostStrength: 0.80,
+                thermalStrength: 0.34,
+                windStrength: 0.42,
+                rockfallStrength: 0.75,
+                chemicalStrength: 0.24,
+                snowStrength: 0.78,
+                seed: 6421,
+                falloff: { mode: 'soft', distance: 90.0, edgeFloor: 0.35 }
             })
         ]
     });
@@ -1539,6 +1946,29 @@ export function SeedThreeDemoTerrains(World)
         id: 'terrain-cliffs',
         name: 'Terrain 02 · Basalt Sea Cliffs',
         maskLayerId: Mask2.id,
+        presetId: 'columnar-basalt-cliffs',
+        weatherGroup: 'solo',
+        weatherSpec: {
+            climateRegime: 'maritime-temperate',
+            windAzimuthDeg: 278.0,
+            windSpeed: 0.76,
+            windShiftMode: 'prevailing',
+            rainMultiplier: 1.15,
+            tempOffsetC: -1.5,
+            stepsPerYear: 48,
+            seed: 8191
+        },
+        lithology: {
+            rockHardness: 0.76,
+            strataContrast: 0.88,
+            strataFrequency: 11.0,
+            dipDeg: 2.5,
+            strikeDeg: 18.0,
+            jointDensity: 0.90,
+            carbonateSolubility: 0.14,
+            ironMineral: 0.82
+        },
+        texturing: CreateDefaultTexturingConfig('studlagil-columnar', ['basalt-columns', 'tectonic-cracks', 'talus-clasts']),
         color: '#5ac8fa',
         bounds: Bounds2,
         resolution: 140,
@@ -1575,14 +2005,46 @@ export function SeedThreeDemoTerrains(World)
                 dipDeg: 3.5,
                 strikeDeg: 18.0,
                 falloff: { mode: 'none', distance: 100.0, edgeFloor: 1.0 }
+            }),
+            CreateTerrainLayer('erosion-pitting', {
+                name: 'Columnar Frost-Wedge Pitting',
+                iterations: 10,
+                frostIntensity: 0.86,
+                thermalIntensity: 0.36,
+                pitScale: 0.70,
+                jointExploit: 0.92,
+                tafoniStrength: 0.34,
+                seed: 8419,
+                falloff: { mode: 'plateau', distance: 60.0, edgeFloor: 0.55 }
+            }),
+            CreateTerrainLayer('erosion-rockfall', {
+                name: 'Columnar Calving & Scree Cones',
+                iterations: 8,
+                criticalSlopeDeg: 58.0,
+                talusReposeDeg: 36.0,
+                calvingRate: 0.68,
+                runoutMobility: 0.65,
+                seed: 8513,
+                falloff: { mode: 'soft', distance: 70.0, edgeFloor: 0.2 }
+            }),
+            CreateTerrainLayer('erosion-chemical', {
+                name: 'Iron-Oxide Sea-Spray Staining',
+                iterations: 8,
+                karstRate: 0.24,
+                sinkholeStrength: 0.16,
+                rillenStrength: 0.36,
+                stainIntensity: 0.88,
+                waterlineHeight: 4.2,
+                seed: 8629,
+                falloff: { mode: 'none', distance: 80.0, edgeFloor: 1.0 }
             })
         ]
     });
 
-    // --- DEMO MASK 3: South Volcanic Caldera Atoll ---
+    // --- DEMO MASK 3: South Sandstone Canyon & Caldera Crescent (Shares Weather Group A with Terrain 01!) ---
     const Mask3 = World.addMaskLayer({
         id: 'mask-atoll',
-        name: 'Mask 03 · Caldera Crescent',
+        name: 'Mask 03 · Canyon Crescent',
         color: '#a3d977'
     });
     World.paintCapsuleMeters(Mask3, [-380, 740], [340, 780], 490, 'paint', 1.0, 0.32, 9103);
@@ -1592,8 +2054,31 @@ export function SeedThreeDemoTerrains(World)
     const Bounds3 = World.computeLayerPaintedBounds(Mask3, 90.0);
     const Region3 = World.addTerrainRegion({
         id: 'terrain-atoll',
-        name: 'Terrain 03 · Caldera Atoll',
+        name: 'Terrain 03 · Canyon Crescent',
         maskLayerId: Mask3.id,
+        presetId: 'utah-navajo-canyons',
+        weatherGroup: 'group-a',
+        weatherSpec: {
+            climateRegime: 'arid-desert',
+            windAzimuthDeg: 34.0,
+            windSpeed: 0.82,
+            windShiftMode: 'bimodal',
+            rainMultiplier: 0.55,
+            tempOffsetC: 5.0,
+            stepsPerYear: 48,
+            seed: 9413
+        },
+        lithology: {
+            rockHardness: 0.42,
+            strataContrast: 0.90,
+            strataFrequency: 13.0,
+            dipDeg: 5.0,
+            strikeDeg: 22.0,
+            jointDensity: 0.66,
+            carbonateSolubility: 0.32,
+            ironMineral: 0.86
+        },
+        texturing: CreateDefaultTexturingConfig('utah-navajo', ['sandstone-cuts', 'tafoni-pits', 'aeolian-ripples']),
         color: '#3ec46d',
         bounds: Bounds3,
         resolution: 136,
@@ -1603,7 +2088,7 @@ export function SeedThreeDemoTerrains(World)
         maxRelief: 220.0,
         stack: [
             CreateTerrainLayer('multifractal', {
-                name: 'Volcanic Rim Ring',
+                name: 'Sandstone Rim Ring',
                 amplitude: 165.0,
                 scale: 2.4,
                 octaves: 6,
@@ -1612,18 +2097,16 @@ export function SeedThreeDemoTerrains(World)
                 seed: 9413,
                 falloff: { mode: 'rim', distance: 290.0, edgeFloor: 0.05 }
             }),
-            CreateTerrainLayer('billow', {
-                name: 'Coastal Folded Foothills',
-                amplitude: 58.0,
-                scale: 3.6,
-                octaves: 5,
-                duneMix: 0.30,
-                azimuth: 52.0,
-                seed: 9521,
-                falloff: { mode: 'soft', distance: 170.0, edgeFloor: 0.0 }
+            CreateTerrainLayer('terrace', {
+                name: 'Cross-Bedded Navajo Strata',
+                bedCount: 11,
+                strength: 0.80,
+                dipDeg: 4.5,
+                strikeDeg: 22.0,
+                falloff: { mode: 'soft', distance: 110.0, edgeFloor: 0.3 }
             }),
             CreateTerrainLayer('spline', {
-                name: 'Caldera Canyon Breach',
+                name: 'Slot Canyon Breach',
                 splineMode: 'canyon',
                 width: 88.0,
                 amount: 64.0,
@@ -1636,6 +2119,29 @@ export function SeedThreeDemoTerrains(World)
                     [-290, 820],
                     [-110, 745]
                 ]
+            }),
+            CreateTerrainLayer('erosion-wind', {
+                name: 'Venturi Sandstone Wind Cuts & Dunes',
+                iterations: 16,
+                windSpeed: 0.86,
+                windAzimuthDeg: 34.0,
+                sandSupply: 0.52,
+                duneStrength: 0.68,
+                canyonAbrasion: 0.90,
+                strataUndercut: 0.88,
+                seed: 9721,
+                falloff: { mode: 'soft', distance: 80.0, edgeFloor: 0.35 }
+            }),
+            CreateTerrainLayer('erosion-pitting', {
+                name: 'Solar Insolation Tafoni Pitting',
+                iterations: 10,
+                frostIntensity: 0.25,
+                thermalIntensity: 0.90,
+                pitScale: 0.65,
+                jointExploit: 0.72,
+                tafoniStrength: 0.88,
+                seed: 9817,
+                falloff: { mode: 'soft', distance: 80.0, edgeFloor: 0.3 }
             })
         ]
     });

@@ -8,6 +8,7 @@
 // - Real-Time 3D Terrain SDF Sculpting & Diagnostic Lenses
 
 import { ExtractRegionTriangleMesh, ApplyTerrainSculptDab, Clamp, SampleCatmullRomPolyline, CreateTerrainLayer } from './TerrainLayerStack.js';
+import { ExtractRegionWaterMesh } from './TerrainErosionPhysics.js';
 
 /*==========================================================================================================================================
                                                       MINIMAL 4x4 MATRIX HELPERS
@@ -207,6 +208,7 @@ uniform int uLensMode;
 uniform int uShowContours;
 uniform int uShowWireGrid;
 uniform int uIsSelected;
+uniform int uIsDataMap;
 uniform vec4 uBrushRing;
 
 vec3 acesFilm(vec3 x) {
@@ -229,7 +231,8 @@ void main() {
     vec3 fdy = dFdy(vWorldPos);
     vec3 faceN = normalize(cross(fdx, fdy));
     if (dot(faceN, vNormal) < 0.0) faceN = -faceN;
-    vec3 N = normalize(mix(vNormal, faceN, 0.42));
+    // Preserve Gaea geological stamp normal perturbations while retaining crisp cliff facet edges
+    vec3 N = normalize(mix(vNormal, faceN, 0.22));
 
     vec3 baseAlbedo = vColor;
     float relH = vWorldPos.y - uSeaLevel;
@@ -251,19 +254,23 @@ void main() {
     vec3 skyAmb = mix(vec3(0.065, 0.075, 0.095), vec3(0.18, 0.22, 0.28), N.y * 0.5 + 0.5);
     vec3 sunCol = uAtmosMode == 1 ? vec3(1.42, 1.05, 0.76) : vec3(1.28, 1.18, 1.04);
 
-    // Subtle cavity/slope darkening for rich sculptural depth
+    // Subtle cavity/slope darkening for rich sculptural depth (or clean high-legibility shading when inspecting a Gaea Data Map)
     float slopeAO = mix(0.76, 1.0, clamp(N.y * 0.65 + 0.35, 0.0, 1.0));
-    vec3 lit = baseAlbedo * (skyAmb + sunCol * ndl + vec3(0.35, 0.45, 0.58) * rim) * slopeAO;
+    vec3 lit = (uIsDataMap == 1 && uLensMode == 0)
+        ? baseAlbedo * (0.62 + 0.48 * ndl)
+        : baseAlbedo * (skyAmb + sunCol * ndl + vec3(0.35, 0.45, 0.58) * rim) * slopeAO;
 
     vec3 V = normalize(uCamPos - vWorldPos);
     vec3 H = normalize(uSunDir + V);
-    float spec = pow(max(dot(N, H), 0.0), 36.0) * 0.035;
+    float wetness = (uLensMode == 0 && uIsDataMap == 0 && N.y > -0.2) ? clamp(vAux.y, 0.0, 1.0) : 0.0;
+    float spec = pow(max(dot(N, H), 0.0), mix(32.0, 84.0, wetness)) * mix(0.032, 0.14, wetness);
     lit += sunCol * spec;
 
-    // Damp shoreline band right at sea level
-    if (uLensMode == 0 && relH > -2.5 && relH < 3.4 && N.y > -0.2) {
-        float wet = 1.0 - smoothstep(-0.4, 3.0, relH);
-        lit *= mix(1.0, 0.62, wet);
+    // Non-flooding capillary damp rock darkening along riverbanks, seeps & splash zones
+    if (uLensMode == 0 && uIsDataMap == 0 && N.y > -0.2) {
+        float shoreWet = (relH > -2.5 && relH < 3.4) ? (1.0 - smoothstep(-0.4, 3.0, relH)) : 0.0;
+        float damp = max(shoreWet, wetness * 0.78);
+        lit *= mix(1.0, 0.60, damp);
     }
 
     // Metric elevation contours
@@ -301,6 +308,80 @@ void main() {
 
     vec3 mapped = acesFilm(lit * uExposure);
     fragColor = vec4(pow(mapped, vec3(1.0 / 2.2)), 1.0);
+}`;
+
+const WATER_VS = `#version 300 es
+precision highp float;
+layout(location = 0) in vec3 aPos;
+layout(location = 1) in vec3 aNorm;
+layout(location = 2) in vec4 aWaterAux; // [depth, speed, foam, sedTint]
+
+uniform mat4 uViewProj;
+uniform float uTime;
+
+out vec3 vWorldPos;
+out vec3 vWaterNorm;
+out vec4 vWaterAux;
+
+void main() {
+    float ripple = sin(aPos.x * 0.28 + uTime * (1.8 + aWaterAux.y * 1.4)) * cos(aPos.z * 0.26 - uTime * 1.5) * 0.055 * clamp(aWaterAux.x * 2.0, 0.0, 1.0);
+    vec3 p = vec3(aPos.x, aPos.y + ripple, aPos.z);
+    vWorldPos = p;
+    vWaterNorm = aNorm;
+    vWaterAux = aWaterAux;
+    gl_Position = uViewProj * vec4(p, 1.0);
+}`;
+
+const WATER_FS = `#version 300 es
+precision highp float;
+in vec3 vWorldPos;
+in vec3 vWaterNorm;
+in vec4 vWaterAux;
+out vec4 fragColor;
+
+uniform vec3 uCamPos;
+uniform vec3 uSunDir;
+uniform float uTime;
+uniform float uExposure;
+
+vec3 acesFilm(vec3 x) {
+    return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0);
+}
+
+void main() {
+    float depth = vWaterAux.x;
+    float speed = vWaterAux.y;
+    float foam  = vWaterAux.z;
+    float sed   = vWaterAux.w;
+    if (depth <= 0.008) discard;
+
+    // Animated micro-ripple normal perturbation proportional to flow speed
+    float rx = cos(vWorldPos.x * 0.52 + uTime * (2.2 + speed)) * 0.09;
+    float rz = sin(vWorldPos.z * 0.48 - uTime * (1.9 + speed * 0.8)) * 0.09;
+    vec3 N = normalize(vWaterNorm + vec3(rx, 0.0, rz));
+
+    vec3 V = normalize(uCamPos - vWorldPos);
+    float fresnel = 0.04 + 0.96 * pow(1.0 - max(dot(N, V), 0.0), 4.2);
+
+    // Beer-Lambert depth absorption: shallow clear glacial turquoise -> deep emerald pool, tinted by suspended silt
+    vec3 shallowCol = mix(vec3(0.08, 0.34, 0.38), vec3(0.24, 0.30, 0.24), sed * 0.65);
+    vec3 deepCol    = mix(vec3(0.015, 0.09, 0.14), vec3(0.09, 0.12, 0.10), sed * 0.5);
+    vec3 bodyCol    = mix(shallowCol, deepCol, 1.0 - exp(-depth * 0.85));
+
+    vec3 skyRefl = vec3(0.14, 0.22, 0.32);
+    vec3 H = normalize(uSunDir + V);
+    float spec = pow(max(dot(N, H), 0.0), 140.0) * 1.15;
+
+    // Froude rapids whitewater foam streaks
+    float streak = 0.5 + 0.5 * sin(vWorldPos.x * 0.35 + vWorldPos.z * 0.31 - uTime * (2.4 + speed * 1.5));
+    float whitewater = clamp(foam * (0.45 + 0.55 * streak), 0.0, 0.92);
+
+    vec3 col = mix(bodyCol, skyRefl, clamp(fresnel * 0.68, 0.0, 0.72)) + vec3(1.25, 1.16, 1.02) * spec;
+    col = mix(col, vec3(0.76, 0.84, 0.88), whitewater * 0.75);
+
+    vec3 mapped = acesFilm(col * uExposure);
+    float alpha = clamp(smoothstep(0.01, 0.18, depth) * mix(0.72, 0.94, whitewater), 0.0, 0.94);
+    fragColor = vec4(pow(mapped, vec3(1.0 / 2.2)), alpha);
 }`;
 
 const OCEAN_VS = `#version 300 es
@@ -501,6 +582,7 @@ export class TerrainOceanViewport
         this.showWireGrid = false;
         this.showBounds3D = true;
         this.showGizmo = true;
+        this.showRivers = true;
 
         // 3D Interaction mode: 'navigate' | 'spline' | 'spline-add' | 'raise' | 'lower' | 'smooth' | 'flatten' | 'pinch' | 'overhang'
         this.tool3D = 'spline'; // Start ready to click/drag 3D Spline Gizmos AND orbit cleanly!
@@ -518,6 +600,7 @@ export class TerrainOceanViewport
         // GPU Programs & Mesh Caches
         this.skyProg = CreateGlProgram(Gl, SKY_VS, SKY_FS);
         this.terrainProg = CreateGlProgram(Gl, TERRAIN_VS, TERRAIN_FS);
+        this.waterProg = CreateGlProgram(Gl, WATER_VS, WATER_FS);
         this.oceanProg = CreateGlProgram(Gl, OCEAN_VS, OCEAN_FS);
         this.lineProg = CreateGlProgram(Gl, LINE_VS, LINE_FS);
 
@@ -1216,7 +1299,13 @@ export class TerrainOceanViewport
                 ibo: Gl.createBuffer(),
                 indexCount: 0,
                 triCount: 0,
-                vertCount: 0
+                vertCount: 0,
+                waterVao: Gl.createVertexArray(),
+                wVboPos: Gl.createBuffer(),
+                wVboNorm: Gl.createBuffer(),
+                wVboAux: Gl.createBuffer(),
+                wIbo: Gl.createBuffer(),
+                waterIndexCount: 0
             };
             Gl.bindVertexArray(Entry.vao);
 
@@ -1237,6 +1326,22 @@ export class TerrainOceanViewport
             Gl.vertexAttribPointer(3, 2, Gl.FLOAT, false, 0, 0);
 
             Gl.bindBuffer(Gl.ELEMENT_ARRAY_BUFFER, Entry.ibo);
+
+            // Channelized 3D River & Lake Water VAO
+            Gl.bindVertexArray(Entry.waterVao);
+            Gl.bindBuffer(Gl.ARRAY_BUFFER, Entry.wVboPos);
+            Gl.enableVertexAttribArray(0);
+            Gl.vertexAttribPointer(0, 3, Gl.FLOAT, false, 0, 0);
+
+            Gl.bindBuffer(Gl.ARRAY_BUFFER, Entry.wVboNorm);
+            Gl.enableVertexAttribArray(1);
+            Gl.vertexAttribPointer(1, 3, Gl.FLOAT, false, 0, 0);
+
+            Gl.bindBuffer(Gl.ARRAY_BUFFER, Entry.wVboAux);
+            Gl.enableVertexAttribArray(2);
+            Gl.vertexAttribPointer(2, 4, Gl.FLOAT, false, 0, 0);
+
+            Gl.bindBuffer(Gl.ELEMENT_ARRAY_BUFFER, Entry.wIbo);
             Gl.bindVertexArray(null);
 
             this.regionGpu.set(Region.id, Entry);
@@ -1268,6 +1373,26 @@ export class TerrainOceanViewport
             Entry.indexCount = Mesh.indices.length;
             Entry.triCount = Mesh.triangleCount;
             Entry.vertCount = Mesh.vertexCount;
+
+            // Upload non-flooding channelized 3D river/lake water surface mesh!
+            const WMesh = ExtractRegionWaterMesh(this.world, Region);
+            if (WMesh && WMesh.indices.length > 0)
+            {
+                Gl.bindBuffer(Gl.ARRAY_BUFFER, Entry.wVboPos);
+                Gl.bufferData(Gl.ARRAY_BUFFER, WMesh.positions, Gl.DYNAMIC_DRAW);
+                Gl.bindBuffer(Gl.ARRAY_BUFFER, Entry.wVboNorm);
+                Gl.bufferData(Gl.ARRAY_BUFFER, WMesh.normals, Gl.DYNAMIC_DRAW);
+                Gl.bindBuffer(Gl.ARRAY_BUFFER, Entry.wVboAux);
+                Gl.bufferData(Gl.ARRAY_BUFFER, WMesh.aux, Gl.DYNAMIC_DRAW);
+                Gl.bindBuffer(Gl.ELEMENT_ARRAY_BUFFER, Entry.wIbo);
+                Gl.bufferData(Gl.ELEMENT_ARRAY_BUFFER, WMesh.indices, Gl.DYNAMIC_DRAW);
+                Entry.waterIndexCount = WMesh.indices.length;
+            }
+            else
+            {
+                Entry.waterIndexCount = 0;
+            }
+
             Region.meshDirty = false;
         }
 
@@ -1347,13 +1472,16 @@ export class TerrainOceanViewport
         Gl.uniform4fv(Gl.getUniformLocation(this.terrainProg, 'uBrushRing'), BrushUniform);
 
         const LocSelected = Gl.getUniformLocation(this.terrainProg, 'uIsSelected');
+        const LocIsDataMap = Gl.getUniformLocation(this.terrainProg, 'uIsDataMap');
         for (const Region of VisibleRegions)
         {
             const Gpu = this._syncRegionGpuBuffer(Region, Region.id === this.activeRegionId ? PreviewFalloffLayerId : null);
             if (Gpu.indexCount === 0) continue;
 
             const IsSel = this.selectedRegionIds.has(Region.id) || this.viewScope === 'all';
+            const DiagMap = Region.texturing?.activeMapPreview;
             Gl.uniform1i(LocSelected, IsSel ? 1 : 0);
+            Gl.uniform1i(LocIsDataMap, (DiagMap && DiagMap !== 'none') ? 1 : 0);
             Gl.bindVertexArray(Gpu.vao);
             Gl.drawElements(Gl.TRIANGLES, Gpu.indexCount, Gl.UNSIGNED_INT, 0);
 
@@ -1362,6 +1490,36 @@ export class TerrainOceanViewport
         }
         this.totalVisibleTriangles = TotalTris;
         this.totalVisibleVertices = TotalVerts;
+
+        // 2b. Channelized 3D Fluvial River & Lake Water Surface Pass (Non-Flooding!)
+        if (this.showRivers && this.lensMode === 0)
+        {
+            const Elapsed = this.animateWaves ? (performance.now() - this.startTime) * 0.001 : 1.25;
+            Gl.disable(Gl.CULL_FACE);
+            Gl.enable(Gl.BLEND);
+            Gl.blendFunc(Gl.SRC_ALPHA, Gl.ONE_MINUS_SRC_ALPHA);
+            Gl.depthMask(false);
+
+            Gl.useProgram(this.waterProg);
+            Gl.uniformMatrix4fv(Gl.getUniformLocation(this.waterProg, 'uViewProj'), false, ViewProj);
+            Gl.uniform3fv(Gl.getUniformLocation(this.waterProg, 'uCamPos'), Eye);
+            Gl.uniform3fv(Gl.getUniformLocation(this.waterProg, 'uSunDir'), SunDir);
+            Gl.uniform1f(Gl.getUniformLocation(this.waterProg, 'uTime'), Elapsed);
+            Gl.uniform1f(Gl.getUniformLocation(this.waterProg, 'uExposure'), this.exposure);
+
+            for (const Region of VisibleRegions)
+            {
+                const DiagMap = Region.texturing?.activeMapPreview;
+                if (DiagMap && DiagMap !== 'none') continue;
+                const Gpu = this.regionGpu.get(Region.id);
+                if (!Gpu || Gpu.waterIndexCount === 0) continue;
+                Gl.bindVertexArray(Gpu.waterVao);
+                Gl.drawElements(Gl.TRIANGLES, Gpu.waterIndexCount, Gl.UNSIGNED_INT, 0);
+            }
+
+            Gl.depthMask(true);
+            Gl.disable(Gl.BLEND);
+        }
 
         // 3. 3D Terrain Bounds Cages
         if (this.showBounds3D && VisibleRegions.length > 0)

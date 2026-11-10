@@ -82,6 +82,7 @@
                 <div class="scene-filters" id="scene-filters" aria-label="Outliner category filters">
                     <button data-filter="all" class="active" type="button">All</button>
                     <button data-filter="terrains" type="button">Terrains</button>
+                    <button data-filter="erosion" type="button">Erosion</button>
                     <button data-filter="splines" type="button">Splines</button>
                     <button data-filter="masks" type="button">2D Masks</button>
                 </div>
@@ -90,11 +91,11 @@
                     <div class="panel-content" id="OutlinerContent"></div>
                 </div>
 
-                <!-- Embedded Add Layer & 3D Spline Quick Library -->
+                <!-- Embedded Add Layer, Physics Erosion & 3D Spline Quick Library -->
                 <div class="library" id="quick-library">
                     <div class="panel-heading">
-                        <span>Add Layer &amp; Splines</span>
-                        <span class="count">7</span>
+                        <span>Add Landform, Erosion &amp; Splines</span>
+                        <span class="count">13</span>
                     </div>
                     <div class="quick-lib-scroll" id="quick-add-list"></div>
                 </div>
@@ -132,6 +133,7 @@
                     </div>
 
                     <div class="viewport-bar-end">
+                        <button id="toggle-rivers-btn" class="button pill-btn active" type="button" title="Toggle channelized 3D River &amp; Lake Water ON/OFF">Rivers ON</button>
                         <button id="toggle-ocean-btn" class="button pill-btn active" type="button" title="Toggle 3D Ocean ON/OFF to inspect thin flat SDF underside (W)">Ocean ON</button>
                         <button id="toggle-gizmo-btn" class="icon-button active" type="button" title="Toggle 3D Spline XYZ (Up/Down) Gizmo (G)" aria-label="Toggle 3D Spline Gizmo"></button>
                         <button id="toggle-bounds-btn" class="icon-button active" type="button" title="Toggle 3D Terrain Bounds Cages" aria-label="Toggle 3D Bounds"></button>
@@ -193,42 +195,56 @@
                     </div>
                 </div>
 
-                <!-- Lower 52px Quick Transport Bar -->
+                <!-- Lower 52px Live Weather Simulation + Quick Transport Bar -->
                 <div class="transport">
+                    <div class="sim-transport-cluster" aria-label="Live Erosion &amp; Weather Cycle Transport">
+                        <button id="sim-play-btn" class="button sim-play-btn" type="button" title="Play / Pause live seasonal weather &amp; erosion simulation (P)">
+                            <span id="sim-play-icon"></span>
+                            <span id="sim-play-label">Simulate</span>
+                        </button>
+                        <button id="sim-step1-btn" class="button burst-button" type="button" title="Step erosion +1 weather tick">+1</button>
+                        <button id="sim-step15-btn" class="button burst-button" type="button" title="Step erosion +15 weather ticks">+15</button>
+                        <button id="sim-reset-btn" class="button burst-button" type="button" title="Re-bake active terrain stack from step 0">Reset</button>
+                        <select id="sim-target-select" aria-label="Weather simulation target scope" title="Simulate active terrain 1-by-1 OR synchronize all terrains sharing the same Weather Group!">
+                            <option value="group" selected>Sim · Shared Weather Group</option>
+                            <option value="solo">Sim · Solo Active (1-by-1)</option>
+                            <option value="all">Sim · All Enabled Terrains</option>
+                        </select>
+                        <span id="sim-weather-pill" class="sim-weather-pill tabular">GRP-A · Winter · 34°</span>
+                    </div>
+
+                    <span class="transport-divider"></span>
+
                     <div class="dock-stat-group">
-                        <span class="dock-label">Brush / Width</span>
+                        <span class="dock-label">Brush</span>
                         <input id="dock-radius-range" class="pill-range dock-range" type="range" min="20" max="600" step="5" value="120" aria-label="Brush or spline width" />
                         <span id="dock-radius-val" class="dock-readout">120 m</span>
                     </div>
 
-                    <span class="transport-divider"></span>
-
                     <div class="dock-stat-group">
-                        <span class="dock-label">Exposure</span>
+                        <span class="dock-label">EV</span>
                         <input id="dock-exposure-range" class="pill-range dock-range" type="range" min="0.35" max="1.65" step="0.02" value="0.94" aria-label="Scene exposure" />
                         <span id="dock-exposure-val" class="dock-readout">0.94</span>
                     </div>
 
-                    <span class="transport-divider"></span>
-
                     <select id="dock-atmos-select" aria-label="Scene lighting atmosphere">
-                        <option value="0" selected>Sky · Obsidian Studio</option>
-                        <option value="1">Sky · Coastal Dusk</option>
-                        <option value="2">Sky · Soft Daylight</option>
+                        <option value="0" selected>Sky · Obsidian</option>
+                        <option value="1">Sky · Dusk</option>
+                        <option value="2">Sky · Daylight</option>
                     </select>
 
                     <div class="transport-actions">
                         <button class="button burst-button" id="dock-fit-mask-btn" type="button" title="Tightly fit active Terrain Bounds Box around painted 2D mask">Fit Bounds</button>
                         <button class="button burst-button" id="dock-save-json-btn" type="button" title="Save Open-World Terrain Project (.json)">Save .JSON</button>
-                        <button class="button burst-button accent" id="dock-new-spline-btn" type="button" title="Add a 3D Spline Layer and activate its Up/Down Gizmo">+ New 3D Spline</button>
+                        <button class="button burst-button accent" id="dock-new-spline-btn" type="button" title="Add a 3D Spline Layer and activate its Up/Down Gizmo">+ 3D Spline</button>
                     </div>
                 </div>
 
-                <!-- Lower 42px History & Demo Presets Strip -->
-                <div class="timeline" aria-label="World presets and quick actions">
+                <!-- Lower 42px Biome & Erosion Preset Ribbon -->
+                <div class="timeline" aria-label="Biome and erosion presets">
                     <div class="timeline-label">
-                        <span>WORLD</span>
-                        <span id="stroke-counter" class="tabular">3 DEMO MASKS</span>
+                        <span>PRESETS</span>
+                        <span id="stroke-counter" class="tabular">18 BIOMES</span>
                     </div>
                     <div class="history-strip" id="preset-strip"></div>
                 </div>
@@ -254,10 +270,11 @@
                 </div>
 
                 <div class="inspector-tabs" id="inspector-tabs" role="tablist" aria-label="Inspector categories">
-                    <button data-itab="layers" class="active" type="button">Layers &amp; Falloff</button>
-                    <button data-itab="spline" type="button">Spline &amp; Gizmo</button>
-                    <button data-itab="slab" type="button">Thin-Slab</button>
-                    <button data-itab="stage" type="button">Stage &amp; Export</button>
+                    <button data-itab="layers" class="active" type="button">Layers</button>
+                    <button data-itab="weather" type="button">Weather</button>
+                    <button data-itab="gaea" type="button">Gaea Maps</button>
+                    <button data-itab="spline" type="button">Spline</button>
+                    <button data-itab="slab" type="button">Slab &amp; IO</button>
                 </div>
 
                 <div class="panel-scroll inspector-scroll" id="InspectorScroll">
