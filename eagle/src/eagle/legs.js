@@ -202,10 +202,10 @@ export function buildLegs(rig) {
         }
       };
       // tibial feathers
-      addRing(S.tib, 0.01, -BONES.tibiotarsus * 0.78, 7, 12, (f) => lerp(0.075, 0.095, f), (f) => lerp(0.026, 0.013, f), 0.18,
+      addRing(S.tib, 0.012, -BONES.tibiotarsus * 0.86, 9, 14, (f) => lerp(0.08, 0.105, f), (f) => lerp(0.032, 0.017, f), 0.3,
         (f) => mergeWeights([[I(S.tib), 1 - ss(0.3, 0, f) * 0.4], [I(S.femur), ss(0.3, 0, f) * 0.4]]), 0.4);
       // upper tarsus: short feathers cover the upper ~40 % (the lower tarsus is bare)
-      addRing(S.tmt, 0.004, -BONES.tarsometatarsus * 0.28, 3, 9, (f) => lerp(0.035, 0.028, f), () => 0.009, 0.1,
+      addRing(S.tmt, 0.004, -BONES.tarsometatarsus * 0.4, 4, 10, (f) => lerp(0.04, 0.03, f), () => 0.010, 0.14,
         () => [[I(S.tmt), 1]], 0.2);
     }
   }

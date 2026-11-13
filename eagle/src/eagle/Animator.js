@@ -66,7 +66,7 @@ const STROKE = {
   bend: K([[0, -0.05], [0.14, 0.45], [0.28, 0.75], [0.42, 0.55], [0.55, 0.1], [0.68, -0.12], [0.82, -0.1], [0.93, -0.08]]),
 };
 const GLIDE = { ...WING_GLIDE, droop: 0.06, bend: 0.32 };
-const WING_KEYS = ['elev', 'sweep', 'twist', 'elbow', 'wrist', 'handTwist', 'foreTwist', 'digitFlex', 'spread', 'fpitch', 'bend', 'alula', 'flutter', 'pronate', 'fluff', 'droop', 'armDroop'];
+const WING_KEYS = ['elev', 'sweep', 'twist', 'elbow', 'wrist', 'handTwist', 'foreTwist', 'digitFlex', 'spread', 'fpitch', 'bend', 'alula', 'flutter', 'pronate', 'fluff', 'droop', 'armDroop', 'foldRoll'];
 const lerpWing = (a, b, t, o = {}) => { for (const k of WING_KEYS) o[k] = lerp(a[k] || 0, b[k] || 0, t); return o; };
 
 // Walk
@@ -318,7 +318,7 @@ export class Animator {
     // ---- trunk
     P.pos.copy(g.pos); P.yaw = g.yaw;
     const basePitch = lerp(0.62, 0.36, W);             // upright perch → near-horizontal walk
-    const baseY = lerp(0.31, 0.285, W);
+    const baseY = lerp(0.296, 0.28, W); // perched: knees well flexed so the trousers hang to the tarsus
     const meanOff = new THREE.Vector3(0, baseY + 0.0012 * breath, 0.0);
     P.trunkOff.set(walkShift + 0.012 * shift + shake * 0.004 * Math.sin(t * TAU * 5.5), baseY + walkBob + 0.0012 * breath - 0.004 * rouseFluff, 0);
     P.pitch = basePitch + 0.006 * breath + 0.02 * W * Math.cos(2 * (gp - midL) + 0.6);
@@ -341,7 +341,7 @@ export class Animator {
     P.wingL = wl; P.wingR = wr;
 
     // ---- tail: breathing bob, counter-roll while walking, occasional flick/fan
-    P.tail.pitch = 0.1 + 0.03 * breath - 0.05 * Math.cos(2 * (gp - midL)) * W + 0.12 * flick;
+    P.tail.pitch = -0.04 + 0.03 * breath - 0.05 * Math.cos(2 * (gp - midL)) * W + 0.12 * flick;
     P.tail.roll = -walkRoll * 0.8;
     P.tail.yaw = -walkYaw * 0.9 + shake * 0.12 * Math.sin(t * TAU * 5.5 + 2.1);
     P.tail.spread = 0.05 + 0.25 * flick + 0.1 * rouseFluff;

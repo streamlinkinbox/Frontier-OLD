@@ -17,8 +17,8 @@ export const PROFILE = {
     const tl = P.notch > 0 ? 0.09 : 0.14;
     const outerFrac = P.outerFrac ?? 0.34;
     return {
-      inner: (t) => ss(0.0, 0.07, t) * (0.72 + 0.28 * ss(0.0, 0.4, t)) * (P.notch > 0 ? 1 - 0.42 * ss(1 - P.notch - 0.035, 1 - P.notch + 0.02, t) : 1) * tip(t, tl, 0.7) * (1 - outerFrac),
-      outer: (t) => ss(0.0, 0.05, t) * (P.emarg > 0 ? 1 - 0.40 * ss(1 - P.emarg - 0.04, 1 - P.emarg + 0.02, t) : 1) * tip(t, tl * 1.2, 0.8) * outerFrac,
+      inner: (t) => ss(0.0, 0.07, t) * (0.72 + 0.28 * ss(0.0, 0.4, t)) * (P.notch > 0 ? 1 - 0.42 * ss(1 - P.notch - 0.035, 1 - P.notch + 0.02, t) : 1) * tip(t, tl, 0.3) * (1 - outerFrac),
+      outer: (t) => ss(0.0, 0.05, t) * (P.emarg > 0 ? 1 - 0.40 * ss(1 - P.emarg - 0.04, 1 - P.emarg + 0.02, t) : 1) * tip(t, tl * 1.2, 0.35) * outerFrac,
     };
   },
   secondary: () => ({

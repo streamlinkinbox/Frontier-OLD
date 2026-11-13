@@ -1,0 +1,71 @@
+[
+ {
+  "eval": "(()=>{window.__ec=(o,l)=>{const g=__game,T=g.THREE;g.setFreeze(true);const p=new T.Vector3().setFromMatrixPosition(g.eagle.rig.trunk.matrixWorld),q=g.eagle.object.quaternion.clone();const c=g.camera;c.up.set(0,1,0);c.position.set(...o).applyQuaternion(q).add(p);c.lookAt(new T.Vector3(...(l||[0,0,0])).applyQuaternion(q).add(p));c.updateMatrixWorld();g.render=g.render;g._r=g._r||g.render;return 1}; __game.step(60); return __game.anim.label})()"
+ },
+ {
+  "eval": "(()=>{__ec([0,0.1,1.6],null); __game.renderOnly(); return 1})()"
+ },
+ {
+  "shot": "front"
+ },
+ {
+  "eval": "(()=>{__ec([1.1,0.4,1.1],null); __game.renderOnly(); return 1})()"
+ },
+ {
+  "shot": "q34"
+ },
+ {
+  "eval": "(()=>{__game.anim.trigger('walk'); __game.step(100); return 1})()"
+ },
+ {
+  "eval": "(()=>{__ec([1.4,0.3,0.6],null); __game.renderOnly(); return 1})()"
+ },
+ {
+  "shot": "walk"
+ },
+ {
+  "eval": "(()=>{__game.anim.trigger('walk'); __game.step(60); __game.anim.trigger('screech'); __game.step(50); return 1})()"
+ },
+ {
+  "eval": "(()=>{__ec([1.4,0.3,0.6],null); __game.renderOnly(); return 1})()"
+ },
+ {
+  "shot": "screech"
+ },
+ {
+  "eval": "(()=>{__game.step(200); __game.anim.trigger('headturn'); __game.step(50); return 1})()"
+ },
+ {
+  "eval": "(()=>{__ec([1.2,0.4,-0.9],null); __game.renderOnly(); return 1})()"
+ },
+ {
+  "shot": "turn"
+ },
+ {
+  "eval": "(()=>{__game.anim.trigger('glide'); __game.step(200); return 1})()"
+ },
+ {
+  "eval": "(()=>{__ec([0.3,2.6,0.2],[0,0,-0.1]); __game.renderOnly(); return 1})()"
+ },
+ {
+  "shot": "gtop"
+ },
+ {
+  "eval": "(()=>{__game.anim.trigger('flap'); __game.step(140); return 1})()"
+ },
+ {
+  "eval": "(()=>{__ec([2.4,0.5,1.2],null); __game.renderOnly(); return 1})()"
+ },
+ {
+  "shot": "fA"
+ },
+ {
+  "eval": "(()=>{__game.step(8); return 1})()"
+ },
+ {
+  "eval": "(()=>{__ec([2.4,0.5,1.2],null); __game.renderOnly(); return 1})()"
+ },
+ {
+  "shot": "fB"
+ }
+]

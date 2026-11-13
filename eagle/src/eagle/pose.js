@@ -5,13 +5,14 @@ import * as THREE from 'three';
 
 export const wing = (o = {}) => ({
   elev: 0, sweep: 0, twist: 0, elbow: 0.6, wrist: 0.5, handTwist: 0, foreTwist: 0, digitFlex: 0,
-  spread: 0.6, fpitch: 0, bend: 0.3, alula: 0, flutter: 0, pronate: 0, fluff: 0, droop: 0, armDroop: 0, t: 0, ...o,
+  spread: 0.6, fpitch: 0, bend: 0.3, alula: 0, flutter: 0, pronate: 0, fluff: 0, droop: 0, armDroop: 0, foldRoll: 0, t: 0, ...o,
 });
 
 // Folded wing at rest (perched): humerus back along the flank, forearm forward, hand back — the
 // classic Z-fold; primaries stack under the secondaries and their tips lie over the tail.
 // (joint angles solved numerically so the elbow/wrist/hand land on measured perched landmarks)
-export const WING_FOLD = wing({ elev: -0.058, sweep: -1.40, twist: 0.84, elbow: 2.806, wrist: 3.015, handTwist: 0.0, foreTwist: 0.0, digitFlex: 0.1, spread: 0, bend: 0, alula: 0 });
+export const WING_FOLD = wing({ elev: -0.058, sweep: -1.40, twist: 0.84, elbow: 2.806, wrist: 3.015, handTwist: 0.5, foreTwist: 0.0, digitFlex: 0.1, droop: 0.08, foldRoll: -1.1, spread: 0, bend: 0, alula: 0 });
+// (handTwist + droop roll the folded hand so the primary tips converge and cross over the closed tail)
 // Soaring / gliding wing: long, broad, flat "plank" with the primaries spread into slotted fingers.
 export const WING_GLIDE = wing({ elev: 0.05, sweep: -0.16, twist: 0.02, elbow: 0.46, wrist: 0.40, digitFlex: 0.05, spread: 1, bend: 0.3 });
 

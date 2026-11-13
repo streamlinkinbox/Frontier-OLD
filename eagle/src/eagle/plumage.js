@@ -41,14 +41,14 @@ export function buildWingPlumage(rig) {
           const o = f.i / 9;
           geo = buildVane({
             len: f.len, width: f.width, profile: PROFILE.primary({ ...f.P, outerFrac: 0.37 - 0.13 * o }),
-            nt: 40, nx: 3, curveX: 0.025 + 0.02 * o, curveY: -0.015, camber: 0.07, quill: 0.07,
+            nt: 40, nx: 3, curveX: 0.025 + 0.02 * o, curveY: -0.015, camber: 0.035, quill: 0.07,
           });
           color = featherColor(C(0x2a2019), rnd, { baseAO: 0.6, aoEnd: 0.4, varAmt: 0.08 });
           target = flight; kind = 1;
           break;
         }
         case 'secondary':
-          geo = buildVane({ len: f.len, width: f.width, profile: PROFILE.secondary(), nt: 22, nx: 3, curveX: -0.012, curveY: -0.03, camber: 0.08, quill: 0.08 });
+          geo = buildVane({ len: f.len, width: f.width, profile: PROFILE.secondary(), nt: 22, nx: 3, curveX: -0.012, curveY: -0.03, camber: 0.03, quill: 0.08 });
           color = featherColor(C(0x30251c), rnd, { baseAO: 0.5, aoEnd: 0.45, varAmt: 0.09 });
           target = flight; kind = 2;
           break;
@@ -195,7 +195,7 @@ export function buildWingSkin(rig) {
         const yv = (top ? 1 : -0.62) * thick * (prof * 0.92 + 0.08 * (1 - e));
         P.addScaledVector(up, yv + 0.004 * (1 - v));
         pos.push(P.x, P.y, P.z);
-        const c = new THREE.Color(top ? 0x4a3828 : 0x33261c);
+        const c = new THREE.Color(top ? 0x2c2018 : 0x241a14); // skin + down under the coverts: dark, never reads as bare
         col.push(c.r, c.g, c.b);
         let w = mergeW([...leadW.map(([b, ww]) => [b, ww * (1 - v)]), ...trailW.map(([b, ww]) => [b, ww * v])]);
         if (rootF > 0) w = mergeW([...w.map(([b, ww]) => [b, ww * (1 - rootF)]), [trunkI, rootF]]);
@@ -217,10 +217,10 @@ export function buildWingSkin(rig) {
       for (let k = 0; k < NSPAN; k += 1) {
         const r0 = surfRows[k], r1 = surfRows[k + 1];
         const u = r0.u;
-        const perRow = Math.max(3, Math.round(r0.chord / 0.012));
+        const perRow = Math.max(4, Math.round(r0.chord / 0.009));
         for (let j = 0; j < perRow; j++) {
           const v = (j + 0.5 + (R() - 0.5) * 0.6) / perRow * (top ? 0.8 : 0.85);
-          if (R() < 0.35) continue;
+          if (R() < 0.08) continue;
           const f = R();
           // interpolate the surface point on this face
           const a = top ? Math.round((1 - v) * NAIR / 2) : Math.round(NAIR / 2 + v * NAIR / 2);

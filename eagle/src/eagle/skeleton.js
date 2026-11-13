@@ -68,7 +68,7 @@ function wingLayout() {
     const u = i / 13;
     L.push({
       kind: 'gsc', i, bone: 'ulna', x: BONES.ulna - 0.012 - u * (BONES.ulna - 0.03), z: 0.006, y: 0.009,
-      len: 0.125 - 0.012 * u, width: 0.056, phiS: 12 - 18 * u, phiF: -86 + 2 * u, foldSrc: 'elbow', rank: -1, twoBone: false,
+      len: 0.152 - 0.014 * u, width: 0.06, phiS: 12 - 18 * u, phiF: -86 + 2 * u, foldSrc: 'elbow', rank: -1, twoBone: false,
     });
   }
   // median coverts (dorsal)
@@ -76,7 +76,7 @@ function wingLayout() {
     const u = i / 12;
     L.push({
       kind: 'msc', i, bone: 'ulna', x: BONES.ulna - 0.02 - u * (BONES.ulna - 0.04), z: 0.022, y: 0.013,
-      len: 0.07 - 0.008 * u, width: 0.042, phiS: 18 - 20 * u, phiF: -80 + 2 * u, foldSrc: 'elbow', rank: -2, twoBone: false,
+      len: 0.092 - 0.01 * u, width: 0.046, phiS: 18 - 20 * u, phiF: -80 + 2 * u, foldSrc: 'elbow', rank: -2, twoBone: false,
     });
   }
   // greater primary coverts (dorsal)
@@ -84,7 +84,7 @@ function wingLayout() {
     const onDigit = i >= 7;
     L.push({
       kind: 'gpc', i, bone: onDigit ? 'digit' : 'hand', x: onDigit ? [0.01, 0.03, 0.05][i - 7] : 0.004 + i * (0.1 / 6), z: 0.004, y: 0.008,
-      len: 0.10 + 0.01 * Math.sin(i / 9 * Math.PI), width: 0.042, phiS: 20 + i * 7.5, splay: i * 0.5, phiF: 86 + i * 0.4,
+      len: 0.12 + 0.012 * Math.sin(i / 9 * Math.PI), width: 0.046, phiS: 20 + i * 7.5, splay: i * 0.5, phiF: 86 + i * 0.4,
       foldSrc: 'wrist', rank: -1, twoBone: false,
     });
   }
@@ -269,7 +269,7 @@ export class Rig {
     };
     const foldTarget = (f) => {
       switch (f.kind) {
-        case 'primary': return new THREE.Vector3(0.05 - 0.002 * f.i, 0.03 - 0.002 * f.i, -0.44);
+        case 'primary': return new THREE.Vector3(0.024 - 0.0015 * f.i, 0.04 - 0.002 * f.i, -0.44); // tips meet over the tail
         case 'secondary': return new THREE.Vector3(0.085, 0.01, -0.35 + 0.004 * f.i);
         case 'tertial': return new THREE.Vector3(0.065, 0.05, -0.27);
         case 'gsc': case 'msc': return new THREE.Vector3(0.09, 0.005, -0.30);
@@ -337,6 +337,9 @@ export class Rig {
         bend += (w.flutter || 0) * 0.02 * (0.3 + o) * Math.sin(t * (41 + f.i * 3.7) + f.i * 1.3) * (1 - fold);
         // in the folded wing the primaries tilt slightly so their tips lie in a tidy stack
         lift += fold * (0.02 + 0.006 * f.i);
+        // folded: the primaries roll about their shafts so the stack lies flat over the closed tail
+        // (seen from behind the wingtips read as two dark bands over the white tail, not edge-on blades)
+        twist += (w.foldRoll || 0) * fold * (0.35 + 0.65 * o);
       } else if (f.kind === 'secondary') {
         bend = w.bend * 0.18 * (1 - fold) + (w.flutter || 0) * 0.012 * Math.sin(t * (33 + f.i * 2.1) + f.i) * (1 - fold);
         twist = -w.fpitch * 0.12 * (1 - f.i / 14);
@@ -368,7 +371,11 @@ export class Rig {
     for (const r of this.rectrices) {
       // fan angle: central pair almost parallel, outer pair up to ~58° from the midline
       const u = r.i / 5;
-      const psi = (0.8 + r.i * lerp(1.3, 10.4, spread)) * deg + (p.asym || 0) * (r.side ? -1 : 1) * u * 0.1;
+      // closed: the rectrices stack over the central pair (a folded bald-eagle tail is ≈ 10–12 cm wide);
+      // fanning moves the feather bases apart along the pygostyle as well as rotating them out
+      const fan = Math.min(1, spread * 1.6);
+      r.bone.position.x = 0.003 + r.i * lerp(0.0022, 0.0068, fan);
+      const psi = (0.3 + r.i * lerp(0.25, 10.4, spread)) * deg + (p.asym || 0) * (r.side ? -1 : 1) * u * 0.1;
       // outer feathers sit lower (central pair on top) and droop slightly when spread
       const lift = -0.02 - u * 0.03 * spread + (p.fluff || 0) * 0.04;
       const twist = (-0.05 - 0.2 * u) * spread * 0.5; // outer vanes tilt down, like a shallow dish
