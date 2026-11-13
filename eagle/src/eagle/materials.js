@@ -63,11 +63,11 @@ export function createMaterials() {
     side: THREE.DoubleSide, alphaTest: 0.5, alphaToCoverage: true, roughness: 0.72, metalness: 0, ...opts,
   });
   const M = {};
-  M.flight = patchFeather(mk(T.flight, { roughness: 0.6 }), { backTint: [1.7, 1.68, 1.66], sheen: 0.22 });
+  M.flight = patchFeather(mk(T.flight, { roughness: 0.78 }), { backTint: [1.7, 1.68, 1.66], sheen: 0.1 });
   // rectrices / tail coverts: white vanes; the underside is the same white, not brightened (was glassy)
   M.tail = patchFeather(mk(T.flight, { roughness: 0.74 }), { backTint: [0.96, 0.95, 0.93], sheen: 0.08 });
   M.tailCovert = patchFeather(mk(T.covert, { roughness: 0.8 }), { backTint: [0.95, 0.94, 0.92], sheen: 0.06 });
-  M.covert = patchFeather(mk(T.covert, { roughness: 0.7 }), { backTint: [1.3, 1.27, 1.24], sheen: 0.16 });
+  M.covert = patchFeather(mk(T.covert, { roughness: 0.8 }), { backTint: [1.3, 1.27, 1.24], sheen: 0.08 });
   M.contour = patchFeather(mk(T.contour, { roughness: 0.78 }), { fluff: true, backTint: [0.8, 0.78, 0.76], sheen: 0.14 });
   M.body = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0 });
   M.skull = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 });

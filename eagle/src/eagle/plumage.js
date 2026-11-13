@@ -43,18 +43,18 @@ export function buildWingPlumage(rig) {
             len: f.len, width: f.width, profile: PROFILE.primary({ ...f.P, outerFrac: 0.37 - 0.13 * o }),
             nt: 40, nx: 3, curveX: 0.025 + 0.02 * o, curveY: -0.015, camber: 0.035, quill: 0.07,
           });
-          color = featherColor(C(0x2a2019), rnd, { baseAO: 0.6, aoEnd: 0.4, varAmt: 0.08 });
+          color = featherColor(C(0x2c2119), rnd, { baseAO: 0.6, aoEnd: 0.4, varAmt: 0.08 });
           target = flight; kind = 1;
           break;
         }
         case 'secondary':
           geo = buildVane({ len: f.len, width: f.width, profile: PROFILE.secondary(), nt: 22, nx: 3, curveX: -0.012, curveY: -0.03, camber: 0.03, quill: 0.08 });
-          color = featherColor(C(0x30251c), rnd, { baseAO: 0.5, aoEnd: 0.45, varAmt: 0.09 });
+          color = featherColor(C(0x3a2b1f), rnd, { baseAO: 0.62, aoEnd: 0.45, varAmt: 0.09 });
           target = flight; kind = 2;
           break;
         case 'tertial':
           geo = buildVane({ len: f.len, width: f.width, profile: PROFILE.tertial(), nt: 18, nx: 3, curveX: -0.03, curveY: -0.02, camber: 0.09, quill: 0.08 });
-          color = featherColor(C(0x372a20), rnd, { baseAO: 0.5, aoEnd: 0.5, varAmt: 0.1 });
+          color = featherColor(C(0x403024), rnd, { baseAO: 0.62, aoEnd: 0.5, varAmt: 0.1 });
           target = flight; kind = 2;
           break;
         default: {
@@ -63,7 +63,7 @@ export function buildWingPlumage(rig) {
           const ventral = !!f.ventral;
           const asym = f.kind === 'alula' ? 0.6 : 0.15;
           geo = buildVane({ len: f.len, width: f.width, profile: PROFILE.covert(asym), nt, nx: 2, curveX: -0.02, curveY: ventral ? 0.04 : -0.05, camber: 0.1, quill: 0.1 });
-          const base = ventral ? C(0x2a1f18) : f.kind === 'scap' ? C(0x2e2219) : f.kind === 'alula' ? C(0x1f1813) : C(0x3a2a1e);
+          const base = ventral ? C(0x2a1f18) : f.kind === 'scap' ? C(0x3a2b1f) : f.kind === 'alula' ? C(0x241b14) : C(0x473525);
           color = featherColor(base, rnd, { baseAO: 0.45, aoEnd: 0.55, varAmt: 0.14, fringe: 0.25 });
           target = covert; kind = 3;
         }
@@ -132,6 +132,7 @@ function mergeW(list) {
 export function buildWingSkin(rig) {
   rig.root.updateMatrixWorld(true);
   const pos = [], col = [], si = [], sw = [], idx = [];
+  const coatA = [];
   const feathers = new SkinBuilder();
   const aBaseNormal = [], aLen = [], aMask = [];
   const R = rng(3131);
@@ -210,6 +211,21 @@ export function buildWingSkin(rig) {
       // world-space construction: winding depends on side because span direction mirrors
       if (!mirrored) idx.push(i0, i1, i2, i1, i3, i2); else idx.push(i0, i2, i1, i1, i2, i3);
     }
+    // feather-coat lattice (lesser/marginal coverts): x along the span, y from the trailing line
+    // forward on each surface so the coverts point toward the trailing edge (see coat.js)
+    {
+      const fsW = 0.0105, H = NAIR / 2;
+      let xs = 0;
+      for (let k = 0; k <= NSPAN; k++) {
+        const row = surfRows[k].row;
+        if (k > 0) { const pr = surfRows[k - 1].row; xs += 0.5 * (row[H].P.distanceTo(pr[H].P) + row[0].P.distanceTo(pr[0].P)) / fsW; }
+        const y = new Float32Array(NAIR + 1);
+        for (let a = 1; a <= H; a++) y[a] = y[a - 1] + row[a].P.distanceTo(row[a - 1].P) / fsW;
+        y[NAIR] = 0;
+        for (let a = NAIR - 1; a > H; a--) y[a] = y[a + 1] + row[a].P.distanceTo(row[a + 1].P) / fsW;
+        for (let a = 0; a <= NAIR; a++) coatA.push(a > H ? -xs - 50 : xs, y[a]);
+      }
+    }
     base += (NSPAN + 1) * (NAIR + 1);
 
     // lesser + marginal coverts (dorsal) and underwing lesser coverts (ventral)
@@ -251,6 +267,11 @@ export function buildWingSkin(rig) {
   g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sw, 4));
   g.setIndex(idx);
   g.computeVertexNormals();
+  const nV = pos.length / 3;
+  g.setAttribute('aCoat', new THREE.Float32BufferAttribute(coatA, 2));
+  g.setAttribute('aWhite', new THREE.BufferAttribute(new Float32Array(nV), 1));
+  g.setAttribute('aLance', new THREE.BufferAttribute(new Float32Array(nV), 1));
+  g.setAttribute('aBare', new THREE.BufferAttribute(new Float32Array(nV), 1));
   const fg = feathers.build();
   fg.setAttribute('aBaseNormal', new THREE.Float32BufferAttribute(aBaseNormal, 3));
   fg.setAttribute('aLen', new THREE.Float32BufferAttribute(aLen, 1));

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { buildContourCard, SkinBuilder } from './featherGeo.js';
 import { COLORS, HEAD } from './anatomy.js';
+import { latticeCoords } from './coat.js';
 
 // Head frame: origin at the occipital condyle/atlas, +Z toward the bill, +Y dorsal.
 // Head length (occiput → bill tip) ≈ 0.155 m; width across the supraorbital ridges ≈ 0.072 m.
@@ -14,10 +15,11 @@ export const EYE_C = new THREE.Vector3(0.0222, 0.0215, 0.0540);
 
 // skull / feathered head volume as a smooth union of ellipsoids (centre, radii)
 const PRIMS = [
-  [[0, 0.024, 0.030], [0.0365, 0.031, 0.044]],  // cranium
+  [[0, 0.022, 0.032], [0.0365, 0.0285, 0.045]],  // cranium (flat-topped)
   [[0, 0.013, 0.006], [0.033, 0.033, 0.030]],   // occiput / nape
-  [[0.0228, 0.0388, 0.057], [0.0178, 0.0108, 0.030]], // supraorbital ridge L ("brow" — gives the eagle its frown)
-  [[-0.0228, 0.0388, 0.057], [0.0178, 0.0108, 0.030]], // R
+  [[0.0185, 0.0372, 0.053], [0.0195, 0.0095, 0.027], 0.024], // supraorbital shelf L ("brow" — gives the eagle its frown)
+  [[-0.0185, 0.0372, 0.053], [0.0195, 0.0095, 0.027], 0.024],
+  [[0, 0.0335, 0.058], [0.026, 0.0135, 0.034], 0.02],   // forehead: fills between the brows, slopes down to the cere // R
   [[0, 0.006, 0.047], [0.0345, 0.022, 0.040]],  // cheeks / jaw muscles
   [[0, 0.021, 0.079], [0.0175, 0.0185, 0.022]], // lores, meets the cere
   [[0, -0.006, 0.030], [0.025, 0.021, 0.040]],  // throat
@@ -44,7 +46,7 @@ const smin = (a, b, k) => -smax(-a, -b, k);
 
 export function headRadius(d) {
   let r = 0;
-  for (const [c, rr] of PRIMS) { const t = rayEllipsoid(CENTER, d, c, rr); if (t > 0) r = r === 0 ? t : smax(r, t, 0.009); }
+  for (const [c, rr, k] of PRIMS) { const t = rayEllipsoid(CENTER, d, c, rr); if (t > 0) r = r === 0 ? t : smax(r, t, k || 0.009); }
   // eyes: the skin wraps the eyeball and forms the lid margins; only an almond-shaped aperture
   // (flat, hooded upper margin under the supraorbital ridge) exposes the cornea and iris.
   _rim = 0;
@@ -140,7 +142,20 @@ export function buildHead(rig) {
     const a = j * (NU + 1) + i, b = a + 1, c = a + NU + 1, d = c + 1;
     idx.push(a, c, b, b, c, d);
   }
-  const skull = finishGeo(pos, idx, { color: [col, 3] });
+  // feather-coat attributes: feathers stream from the bill (θ = 0) back over the head to the nape (θ = π)
+  const rimArr = [];
+  for (let j = 0; j <= NV; j++) for (let i = 0; i <= NU; i++) { headRadius(dirs[j * (NU + 1) + i]); rimArr.push(lastRim()); }
+  const Pgrid = [];
+  for (let j = 0; j <= NV; j++) { const row = []; for (let i = 0; i <= NU; i++) { const o = (j * (NU + 1) + i) * 3; row.push(new THREE.Vector3(pos[o], pos[o + 1], pos[o + 2])); } Pgrid.push(row); }
+  const fsH = (j) => lerp(0.0032, 0.0068, ss(0.25, 2.0, (j / NV) * Math.PI));
+  const coat = latticeCoords(Pgrid, (j) => fsH(j), NU / 4, -1);
+  const aWhite = [], aLance = [], aBare = [];
+  for (let j = 0; j <= NV; j++) for (let i = 0; i <= NU; i++) {
+    const th = (j / NV) * Math.PI;
+    aWhite.push(1); aLance.push(0.85 * ss(1.7, 2.6, th));
+    aBare.push(Math.min(1, rimArr[j * (NU + 1) + i] * 1.6));
+  }
+  const skull = finishGeo(pos, idx, { color: [col, 3], aCoat: [coat, 2], aWhite: [aWhite, 1], aLance: [aLance, 1], aBare: [aBare, 1] });
   toBind(skull, HM, (i, p) => {
     const lp = new THREE.Vector3(pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]);
     const f = ss(0.02, -0.012, lp.z) * 0.6;
@@ -165,7 +180,7 @@ export function buildHead(rig) {
       const back = ss(0.05, -0.01, p.z);
       return lerp(0.0075, 0.017, back) * (1 + 0.15 * ss(0.03, -0.01, p.y));
     };
-    for (let tries = 0; tries < 90000 && accepted.length < 3200; tries++) {
+    for (let tries = 0; tries < 90000 && accepted.length < 650; tries++) {
       const th = Math.acos(1 - 2 * R()), ph = R() * Math.PI * 2;
       const d = new THREE.Vector3(Math.sin(th) * Math.cos(ph), Math.sin(th) * Math.sin(ph), Math.cos(th));
       const p = CENTER.clone().addScaledVector(d, headRadius(d));
@@ -175,6 +190,7 @@ export function buildHead(rig) {
       if (p.z > 0.083 && p.y > -0.012) skip = true;       // cere & bill base
       if (p.z > 0.066 && p.y < 0.002 && Math.abs(p.x) < 0.024) skip = true; // gape / lower bill base
       if (p.z < -0.004 && p.y < 0.02) skip = true;        // inside the neck (neck feathers cover this)
+      if (p.z > 0.022 || p.y > 0.03) skip = true;        // the face and crown are rendered by the coat shader
       if (skip) continue;
       const L = sizeAt(p);
       const rmin = L * 0.26;
@@ -208,11 +224,11 @@ export function buildHead(rig) {
       m.makeBasis(X, N, dir).setPosition(p.clone().addScaledVector(N, 0.0003));
       m.premultiply(HM);
       const back = ss(0.04, -0.01, p.z);
-      const geo = buildContourCard({ len: L * (0.85 + 0.3 * R()), width: L * lerp(0.62, 0.40, back), lift: lerp(0.09, 0.1, back), droop: 0.6, nt: 3, nx: 1 });
+      const geo = buildContourCard({ len: L * (0.85 + 0.3 * R()) * 1.2, width: L * lerp(0.55, 0.40, back), lift: 0.05, droop: 0.6, nt: 3, nx: 1 });
       const f = ss(0.02, -0.012, p.z) * 0.6;
       const w = mergeWeights([[headI, 1 - f], [n13, f]]);
       const c = new THREE.Color(COLORS.white).multiplyScalar(0.84 + 0.16 * R());
-      B.addGrid(geo, m, () => w, (t, s, o) => o.copy(c).multiplyScalar(0.45 + 0.55 * ss(0.25, 0.92, t)), { rand: R(), kind: 8 });
+      B.addGrid(geo, m, () => w, (t, s, o) => o.copy(c).multiplyScalar(0.8 + 0.2 * ss(0.25, 0.92, t)), { rand: R(), kind: 8 });
       const Nw = N.clone().transformDirection(HM);
       for (let q = 0; q < geo.count; q++) { aBaseNormal.push(Nw.x, Nw.y, Nw.z); aLen.push(L); aMask.push(1.0 * back + 0.2); }
     }

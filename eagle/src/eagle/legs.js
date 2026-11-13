@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { BONES, COLORS } from './anatomy.js';
 import { buildContourCard, SkinBuilder } from './featherGeo.js';
 import { flipWinding, mergeGeos } from './head.js';
+import { latticeCoords } from './coat.js';
 
 const ss = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -79,20 +80,35 @@ export function buildLegs(rig) {
     const S = rig.sides[s];
     const mirrored = s === 1;
     const I = (b) => b.userData.index;
-    // ---- tibiotarsus skin tube (under the "trousers")
+    // ---- "trousers": the feathered tibiotarsus. A closed coat of long, soft tibial feathers that
+    // hang down over the intertarsal joint; fuller behind (the feathers droop backward) and merging
+    // into the belly at the top. Rendered with the coat shader (see coat.js) + a ragged hem of cards.
     {
       const st = [];
-      const N = 12;
+      const N = 16, AR = 36;
       for (let k = 0; k <= N; k++) {
         const f = k / N;
-        const y = -BONES.tibiotarsus * f;
-        const p = worldPt(S.tib, 0, y, 0.004 * Math.sin(Math.PI * f));
+        const y = lerp(0.03, -BONES.tibiotarsus * 1.06, f);
         const T = worldDir(S.tib, 0, -1, 0), Nn = worldDir(S.tib, 0, 0, 1);
-        const w = mergeWeights([[I(S.femur), ss(0.25, 0, f) * 0.5], [I(S.tib), 1 - ss(0.85, 1.0, f) * 0.5 - ss(0.25, 0, f) * 0.5], [I(S.tmt), ss(0.85, 1.0, f) * 0.5]]);
-        const r = lerp(0.030, 0.012, f ** 0.8);
-        st.push({ p, T, N: Nn, w: r, h: r * 1.15, weights: w, color: brown, v: f });
+        // the feather mass hangs behind the bone and its axis drifts backward toward the hem
+        const p = worldPt(S.tib, 0, y, -0.006 - 0.008 * f);
+        const w = mergeWeights([[I(S.femur), ss(0.3, 0, f) * 0.6], [I(S.tib), 1 - ss(0.3, 0, f) * 0.6 - ss(0.88, 1.0, f) * 0.35], [I(S.tmt), ss(0.88, 1.0, f) * 0.35]]);
+        const r = lerp(0.054, 0.03, Math.pow(f, 1.1)) * (1 - 0.3 * ss(0.85, 1.0, f));
+        st.push({ p, T, N: Nn, w: r * 0.95, h: r * 1.15, weights: w, color: brown, v: f });
       }
-      const g = tube(st, 16);
+      const g = tube(st, AR, { capStart: false, capEnd: true, profile: (ang) => 1 + 0.12 * Math.max(0, -Math.sin(ang)) });
+      // lattice coordinates (front = ang π/2 is the midline; feathers point down the leg)
+      const pa = g.attributes.position, P = [];
+      for (let k = 0; k <= N; k++) { const row = []; for (let a = 0; a <= AR; a++) row.push(new THREE.Vector3().fromBufferAttribute(pa, k * (AR + 1) + a)); P.push(row); }
+      const fs = (k) => lerp(0.0125, 0.0105, k / N);
+      const lc = latticeCoords(P, fs, AR / 4, -1);
+      const n = pa.count;
+      const coat = new Float32Array(n * 2); coat.set(lc);
+      for (let i = lc.length / 2; i < n; i++) { coat[i * 2] = 0; coat[i * 2 + 1] = lc[lc.length - 1]; }
+      g.setAttribute('aCoat', new THREE.BufferAttribute(coat, 2));
+      g.setAttribute('aWhite', new THREE.BufferAttribute(new Float32Array(n), 1));
+      g.setAttribute('aLance', new THREE.BufferAttribute(new Float32Array(n).fill(0.35), 1));
+      g.setAttribute('aBare', new THREE.BufferAttribute(new Float32Array(n), 1));
       shanks.push(g);
     }
     // ---- tarsometatarsus: bare, yellow, reticulate scales; transverse scutes on the front of the lower half
@@ -193,17 +209,18 @@ export function buildLegs(rig) {
             const Nn = new THREE.Vector3().crossVectors(d, X).normalize();
             const m = new THREE.Matrix4().makeBasis(X, Nn, d).setPosition(P);
             const L = lenFn(f) * (0.85 + 0.3 * R());
-            const geo = buildContourCard({ len: L, width: L * 0.5, lift: 0.12, droop: 0.5, nt: 4, nx: 2 });
-            const c = brown.clone().multiplyScalar(0.8 + 0.4 * R());
+            const geo = buildContourCard({ len: L, width: L * 0.5, lift: 0.06, droop: 0.5, nt: 4, nx: 2 });
+            const c = brown.clone().multiplyScalar(0.62 + 0.2 * R());
             const w = weightsFn(f);
-            featherB.addGrid(geo, m, () => w, (t, sx, o) => o.copy(c).multiplyScalar(0.6 + 0.4 * ss(0, 0.5, t)), { mirrored, rand: R(), kind: 6 });
+            featherB.addGrid(geo, m, () => w, (t, sx, o) => o.copy(c).multiplyScalar(0.8 + 0.2 * ss(0, 0.5, t)), { mirrored, rand: R(), kind: 6 });
             for (let q = 0; q < geo.count; q++) { aBaseNormal.push(Nn.x, Nn.y, Nn.z); aLen.push(L); aMask.push(mask); }
           }
         }
       };
       // tibial feathers
-      addRing(S.tib, 0.012, -BONES.tibiotarsus * 0.86, 9, 14, (f) => lerp(0.08, 0.105, f), (f) => lerp(0.032, 0.017, f), 0.3,
-        (f) => mergeWeights([[I(S.tib), 1 - ss(0.3, 0, f) * 0.4], [I(S.femur), ss(0.3, 0, f) * 0.4]]), 0.4);
+      // ragged hem of the trousers: the longest tibial feathers hang over the intertarsal joint
+      addRing(S.tib, -BONES.tibiotarsus * 0.72, -BONES.tibiotarsus * 0.86, 2, 16, (f) => lerp(0.05, 0.045, f), (f) => lerp(0.024, 0.02, f), 0.18,
+        () => [[I(S.tib), 1]], 0.4);
       // upper tarsus: short feathers cover the upper ~40 % (the lower tarsus is bare)
       addRing(S.tmt, 0.004, -BONES.tarsometatarsus * 0.4, 4, 10, (f) => lerp(0.04, 0.03, f), () => 0.010, 0.14,
         () => [[I(S.tmt), 1]], 0.2);

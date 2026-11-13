@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { buildContourCard, SkinBuilder } from './featherGeo.js';
 import { COLORS } from './anatomy.js';
+import { latticeCoords } from './coat.js';
 
 // ------------------------------------------------------------------------------------------------
 // Body = loft of superellipse sections along a centreline: vent → belly → chest → 13 neck rings → nape.
@@ -138,8 +139,37 @@ export function buildBodyLoft(rig) {
     const i0 = k * (AROUND + 1) + a, i1 = i0 + 1, i2 = i0 + AROUND + 1, i3 = i2 + 1;
     idx.push(i0, i2, i1, i1, i2, i3);
   }
+  // ---- feather-coat attributes (see coat.js)
+  const fsAt = (k, a) => {
+    const Rg = rings[k], ang = (a / AROUND) * Math.PI * 2, c = Math.cos(ang);
+    if (Rg.neck > 0) return lerp(0.0115, 0.0072, Math.min(1, Rg.neck));
+    let f = 0.0165 + 0.003 * Math.max(0, c) - 0.0015 * Math.max(0, -c);
+    f *= lerp(0.72, 1, ss(0.4, 1.6, Rg.sc)); // small feathers around the vent
+    return f;
+  };
+  const coat = latticeCoords(surf.map((row) => row.map((v) => v.P)), fsAt, 0, 1);
+  const aWhite = [], aLance = [], aBare = [];
+  for (let k = 0; k <= RINGS; k++) {
+    const Rg = rings[k];
+    for (let a = 0; a <= AROUND; a++) {
+      const ang = (a / AROUND) * Math.PI * 2;
+      const throat = Math.max(0, -Math.cos(ang));
+      // white hood reaches a little lower on the throat / upper breast than on the hind-neck
+      // (station coordinate sc: 0 … 7 trunk stations vent → chest front, 8 … neck base → nape)
+      const hoodB = 8.05 - 0.45 * throat ** 1.5;
+      const wv = ss(hoodB - 0.45, hoodB + 0.45, Rg.sc);
+      const vent = Rg.sc < 1.2 ? ss(0.2, -0.6, Math.cos(ang)) * ss(1.2, 0.3, Rg.sc) : 0;
+      aWhite.push(Math.max(wv, vent));
+      aLance.push(Rg.neck > 0 ? 0.85 * ss(0.0, 0.35, Rg.neck) : 0);
+      aBare.push(0);
+    }
+  }
   // cap the vent end
   const g = new THREE.BufferGeometry();
+  g.setAttribute('aCoat', new THREE.BufferAttribute(coat, 2));
+  g.setAttribute('aWhite', new THREE.Float32BufferAttribute(aWhite, 1));
+  g.setAttribute('aLance', new THREE.Float32BufferAttribute(aLance, 1));
+  g.setAttribute('aBare', new THREE.Float32BufferAttribute(aBare, 1));
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
   g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
