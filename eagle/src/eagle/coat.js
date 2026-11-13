@@ -82,7 +82,7 @@ const GLSL_COMMON = /* glsl */`
   }
 `;
 
-export function createCoatMaterial({ brown = 0x382819, brownEdge = 0x574029, white = COLORS.white, whiteShade = 0xb9b2a6, down = 0x1a130e } = {}) {
+export function createCoatMaterial({ brown = 0x45311f, brownEdge = 0x6a4e33, white = COLORS.white, whiteShade = 0xb9b2a6, down = 0x1a130e } = {}) {
   const mat = new THREE.MeshPhysicalMaterial({
     vertexColors: true, roughness: 0.74, metalness: 0,
     sheen: 0.35, sheenRoughness: 0.6, sheenColor: new THREE.Color(0x9a8468),

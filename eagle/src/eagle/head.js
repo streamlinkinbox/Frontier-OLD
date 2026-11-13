@@ -180,7 +180,7 @@ export function buildHead(rig) {
       const back = ss(0.05, -0.01, p.z);
       return lerp(0.0075, 0.017, back) * (1 + 0.15 * ss(0.03, -0.01, p.y));
     };
-    for (let tries = 0; tries < 90000 && accepted.length < 650; tries++) {
+    for (let tries = 0; tries < 90000 && accepted.length < 1100; tries++) {
       const th = Math.acos(1 - 2 * R()), ph = R() * Math.PI * 2;
       const d = new THREE.Vector3(Math.sin(th) * Math.cos(ph), Math.sin(th) * Math.sin(ph), Math.cos(th));
       const p = CENTER.clone().addScaledVector(d, headRadius(d));
@@ -190,7 +190,7 @@ export function buildHead(rig) {
       if (p.z > 0.083 && p.y > -0.012) skip = true;       // cere & bill base
       if (p.z > 0.066 && p.y < 0.002 && Math.abs(p.x) < 0.024) skip = true; // gape / lower bill base
       if (p.z < -0.004 && p.y < 0.02) skip = true;        // inside the neck (neck feathers cover this)
-      if (p.z > 0.022 || p.y > 0.03) skip = true;        // the face and crown are rendered by the coat shader
+      if ((p.z > 0.022 && p.y > -0.004) || p.y > 0.03) skip = true; // face and crown: coat shader; cards only where the neck joins (nape, throat)
       if (skip) continue;
       const L = sizeAt(p);
       const rmin = L * 0.26;

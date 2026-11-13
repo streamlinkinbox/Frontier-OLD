@@ -46,7 +46,8 @@ export function buildBodyLoft(rig) {
   const I = (b) => b.userData.index;
   const trunkI = I(rig.trunk), tailI = I(rig.tail);
   const st = [];
-  for (const [z, yc, hw, hT, hB] of TRUNK_ST) {
+  for (const [z, yc, hw0, hT, hB] of TRUNK_ST) {
+    const hw = hw0 * (1 + 0.08 * ss(-0.2, -0.05, z)); // broad-chested
     const tw = ss(-0.16, -0.215, z) * 0.85;
     st.push({ p: new THREE.Vector3(0, yc, z), up: new THREE.Vector3(0, 1, 0), hw, hT, hB, w: [[trunkI, 1 - tw], [tailI, tw]], neck: 0 });
   }
@@ -57,11 +58,11 @@ export function buildBodyLoft(rig) {
     const u = (i - 1) / (nv - 2); // 0 at n1 → 1 at n13
     const up = new THREE.Vector3(0, 1, 0).transformDirection(b.matrixWorld);
     // the vertebral column runs in the dorsal part of the feathered neck near its base
-    const ventral = lerp(0.036, 0.006, u ** 0.7);
+    const ventral = lerp(0.024, 0.006, u ** 0.7);
     const p = b.getWorldPosition(new THREE.Vector3()).addScaledVector(up, -ventral);
-    const r = lerp(0.066, 0.044, u ** 0.9); // feathered bald-eagle neck is nearly as wide as the head
+    const r = lerp(0.06, 0.044, u ** 0.9); // feathered bald-eagle neck is nearly as wide as the head
     const w = i === 1 ? [[trunkI, 0.55], [I(b), 0.45]] : i === 2 ? [[trunkI, 0.2], [I(rig.neck[1]), 0.2], [I(b), 0.6]] : [[I(rig.neck[i - 1]), 0.25], [I(b), 0.75]];
-    st.push({ p, up, hw: r * 1.02, hT: r * lerp(0.85, 0.98, u), hB: r * lerp(1.45, 1.05, u), w, neck: u });
+    st.push({ p, up, hw: r * 1.04, hT: r * lerp(0.88, 0.98, u), hB: r * lerp(1.1, 1.0, u), w, neck: u });
   }
   // nape (inside the back of the skull)
   {
@@ -142,10 +143,11 @@ export function buildBodyLoft(rig) {
   // ---- feather-coat attributes (see coat.js)
   const fsAt = (k, a) => {
     const Rg = rings[k], ang = (a / AROUND) * Math.PI * 2, c = Math.cos(ang);
-    if (Rg.neck > 0) return lerp(0.0115, 0.0072, Math.min(1, Rg.neck));
+    // continuous across the body → neck transition (a jump would tear the feather lattice)
     let f = 0.0165 + 0.003 * Math.max(0, c) - 0.0015 * Math.max(0, -c);
     f *= lerp(0.72, 1, ss(0.4, 1.6, Rg.sc)); // small feathers around the vent
-    return f;
+    const fn = lerp(0.0115, 0.0072, Math.min(1, Rg.neck));
+    return lerp(f, fn, ss(6.6, 8.8, Rg.sc));
   };
   const coat = latticeCoords(surf.map((row) => row.map((v) => v.P)), fsAt, 0, 1);
   const aWhite = [], aLance = [], aBare = [];
@@ -160,7 +162,7 @@ export function buildBodyLoft(rig) {
       const wv = ss(hoodB - 0.45, hoodB + 0.45, Rg.sc);
       const vent = Rg.sc < 1.2 ? ss(0.2, -0.6, Math.cos(ang)) * ss(1.2, 0.3, Rg.sc) : 0;
       aWhite.push(Math.max(wv, vent));
-      aLance.push(Rg.neck > 0 ? 0.85 * ss(0.0, 0.35, Rg.neck) : 0);
+      aLance.push(0.85 * ss(7.2, 10.5, Rg.sc));
       aBare.push(0);
     }
   }

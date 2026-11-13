@@ -56,6 +56,8 @@ async function main() {
   setLoad(0.4, 'Growing plumage…'); await tick();
   const eagle = new Eagle({ quality: params.get('q') || 'high' });
   scene.add(eagle.object);
+  // plumage gets a stronger share of sky light than the terrain (dark feathers otherwise read as black)
+  for (const m of eagle.skyLitMaterials) if (m) { m.envMap = scene.environment; m.envMapIntensity = 1.0; m.needsUpdate = true; }
   const anim = new Animator(eagle, { ground: terrainHeight, lake: LAKE });
   const post = new Post(renderer, scene, camera, { samples: 4, bloom: false });
   post.finish.uniforms.uGrain.value = 0.018; post.finish.uniforms.uVignette.value = 0.22;

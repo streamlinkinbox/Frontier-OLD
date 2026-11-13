@@ -43,18 +43,18 @@ export function buildWingPlumage(rig) {
             len: f.len, width: f.width, profile: PROFILE.primary({ ...f.P, outerFrac: 0.37 - 0.13 * o }),
             nt: 40, nx: 3, curveX: 0.025 + 0.02 * o, curveY: -0.015, camber: 0.035, quill: 0.07,
           });
-          color = featherColor(C(0x2c2119), rnd, { baseAO: 0.6, aoEnd: 0.4, varAmt: 0.08 });
+          color = featherColor(C(0x3b2c21), rnd, { baseAO: 0.6, aoEnd: 0.4, varAmt: 0.08 });
           target = flight; kind = 1;
           break;
         }
         case 'secondary':
           geo = buildVane({ len: f.len, width: f.width, profile: PROFILE.secondary(), nt: 22, nx: 3, curveX: -0.012, curveY: -0.03, camber: 0.03, quill: 0.08 });
-          color = featherColor(C(0x3a2b1f), rnd, { baseAO: 0.62, aoEnd: 0.45, varAmt: 0.09 });
+          color = featherColor(C(0x4a3828), rnd, { baseAO: 0.62, aoEnd: 0.45, varAmt: 0.09 });
           target = flight; kind = 2;
           break;
         case 'tertial':
           geo = buildVane({ len: f.len, width: f.width, profile: PROFILE.tertial(), nt: 18, nx: 3, curveX: -0.03, curveY: -0.02, camber: 0.09, quill: 0.08 });
-          color = featherColor(C(0x403024), rnd, { baseAO: 0.62, aoEnd: 0.5, varAmt: 0.1 });
+          color = featherColor(C(0x50392a), rnd, { baseAO: 0.62, aoEnd: 0.5, varAmt: 0.1 });
           target = flight; kind = 2;
           break;
         default: {
@@ -63,7 +63,7 @@ export function buildWingPlumage(rig) {
           const ventral = !!f.ventral;
           const asym = f.kind === 'alula' ? 0.6 : 0.15;
           geo = buildVane({ len: f.len, width: f.width, profile: PROFILE.covert(asym), nt, nx: 2, curveX: -0.02, curveY: ventral ? 0.04 : -0.05, camber: 0.1, quill: 0.1 });
-          const base = ventral ? C(0x2a1f18) : f.kind === 'scap' ? C(0x3a2b1f) : f.kind === 'alula' ? C(0x241b14) : C(0x473525);
+          const base = ventral ? C(0x3a2b20) : f.kind === 'scap' ? C(0x4a3727) : f.kind === 'alula' ? C(0x33261c) : C(0x5a4330);
           color = featherColor(base, rnd, { baseAO: 0.45, aoEnd: 0.55, varAmt: 0.14, fringe: 0.25 });
           target = covert; kind = 3;
         }

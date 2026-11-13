@@ -70,7 +70,7 @@ const WING_KEYS = ['elev', 'sweep', 'twist', 'elbow', 'wrist', 'handTwist', 'for
 const lerpWing = (a, b, t, o = {}) => { for (const k of WING_KEYS) o[k] = lerp(a[k] || 0, b[k] || 0, t); return o; };
 
 // Walk
-const WALK = { freq: 1.25, duty: 0.62, stride: 0.21, lift: 0.055, halfWidth: 0.072, footZ: 0.035, radius: 2.4 };
+const WALK = { freq: 1.2, duty: 0.6, stride: 0.24, lift: 0.075, halfWidth: 0.072, footZ: 0.035, radius: 2.4 };
 // Flight path: a wide circle over the lake
 const FLIGHT = { radius: 29, alt: 62, flapSpeed: 11, glideSpeed: 12 }; // circle stays over open water
 
@@ -310,29 +310,39 @@ export class Animator {
     const gp = g.phase * TAU;
     const midL = WALK.duty * 0.5 * TAU;               // left mid-stance
     const cL = Math.cos(gp - midL);                    // +1 at left mid-stance, −1 at right mid-stance
-    const walkRoll = -0.085 * cL * W;                  // body rolls over the stance leg
-    const walkShift = 0.024 * cL * W;                  // weight shifts over the stance foot
-    const walkYaw = 0.07 * Math.sin(gp - midL) * W;    // pelvis/trunk yaws with the striding leg
-    const walkBob = 0.011 * Math.cos(2 * (gp - midL)) * W; // highest at mid-stance, twice per stride
+    // "awkward, rocking gait": the heavy trunk rolls well over each stance leg (lagging the foot
+    // contact a little), shifts its weight sideways, yaws with the striding leg, rises at mid-stance
+    // and surges forward after each push-off.
+    const cLr = Math.cos(gp - midL - 0.35);
+    const walkRoll = -0.17 * cLr * W;
+    const walkShift = 0.036 * cL * W;
+    const walkYaw = 0.12 * Math.sin(gp - midL) * W;
+    const walkBob = 0.016 * Math.cos(2 * (gp - midL)) * W;
+    const walkSurge = 0.012 * Math.sin(2 * (gp - midL) - 0.8) * W;
 
     // ---- trunk
     P.pos.copy(g.pos); P.yaw = g.yaw;
-    const basePitch = lerp(0.62, 0.36, W);             // upright perch → near-horizontal walk
+    const basePitch = lerp(0.64, 0.48, W);             // upright perch → body inclined ~30° while walking
     const baseY = lerp(0.296, 0.28, W); // perched: knees well flexed so the trousers hang to the tarsus
     const meanOff = new THREE.Vector3(0, baseY + 0.0012 * breath, 0.0);
-    P.trunkOff.set(walkShift + 0.012 * shift + shake * 0.004 * Math.sin(t * TAU * 5.5), baseY + walkBob + 0.0012 * breath - 0.004 * rouseFluff, 0);
-    P.pitch = basePitch + 0.006 * breath + 0.02 * W * Math.cos(2 * (gp - midL) + 0.6);
+    P.trunkOff.set(walkShift + 0.012 * shift + shake * 0.004 * Math.sin(t * TAU * 5.5), baseY + walkBob + 0.0012 * breath - 0.004 * rouseFluff, walkSurge);
+    P.pitch = basePitch + 0.006 * breath + 0.045 * W * Math.cos(2 * (gp - midL) + 0.6);
     P.roll = walkRoll + 0.035 * shift + shake * 0.09 * Math.sin(t * TAU * 5.5);
     P.bodyYaw = walkYaw + shake * 0.06 * Math.sin(t * TAU * 5.5 + 1.2);
     const mean = { off: meanOff, pitch: basePitch + 0.006 * breath, roll: 0.035 * shift, bodyYaw: 0 };
 
     // ---- wings: folded; balance shuffles while walking, re-tuck, rouse
     const wl = { ...WING_FOLD }, wr = { ...WING_FOLD };
-    const shuffleL = W * (0.07 * Math.max(0, -cL) + 0.02);  // wing on the high side lifts a little
-    const shuffleR = W * (0.07 * Math.max(0, cL) + 0.02);
+    // balance: while walking the folded wings are held loosely away from the flanks (wrists dropped)
+    // and the wing on the rising side is lifted as the body rolls — lagging the roll (inertia)
+    const cLw = Math.cos(gp - midL - 0.9);
+    const shuffleL = W * (0.13 * Math.max(0, -cLw) + 0.06);
+    const shuffleR = W * (0.13 * Math.max(0, cLw) + 0.06);
     for (const [w, sh] of [[wl, shuffleL], [wr, shuffleR]]) {
       w.elev += sh + 0.1 * retuck + 0.08 * rouseFluff;
-      w.sweep += 0.06 * sh / 0.09 * W * 0.5 + 0.12 * retuck;
+      w.droop += 0.12 * W;
+      w.elbow -= 0.1 * W + 0.25 * sh;
+      w.sweep += 0.35 * sh + 0.12 * retuck;
       w.elbow -= 0.12 * retuck + 0.12 * rouseFluff;
       w.wrist -= 0.1 * retuck + 0.1 * rouseFluff;
       w.fluff = rouseFluff;
@@ -341,9 +351,9 @@ export class Animator {
     P.wingL = wl; P.wingR = wr;
 
     // ---- tail: breathing bob, counter-roll while walking, occasional flick/fan
-    P.tail.pitch = -0.04 + 0.03 * breath - 0.05 * Math.cos(2 * (gp - midL)) * W + 0.12 * flick;
-    P.tail.roll = -walkRoll * 0.8;
-    P.tail.yaw = -walkYaw * 0.9 + shake * 0.12 * Math.sin(t * TAU * 5.5 + 2.1);
+    P.tail.pitch = -0.04 + 0.03 * breath - 0.09 * Math.cos(2 * (gp - midL) - 0.5) * W + 0.12 * flick;
+    P.tail.roll = -walkRoll * 0.9;
+    P.tail.yaw = -walkYaw * 1.3 - 0.08 * Math.sin(gp - midL - 0.7) * W + shake * 0.12 * Math.sin(t * TAU * 5.5 + 2.1);
     P.tail.spread = 0.05 + 0.25 * flick + 0.1 * rouseFluff;
     P.tail.fluff = rouseFluff;
 
@@ -363,11 +373,11 @@ export class Animator {
     P.legL = legs[0]; P.legR = legs[1];
 
     // ---- head / neck / bill: gaze + actions
-    let atlas = new THREE.Vector3(0, lerp(0.098, 0.082, W), lerp(0.242, 0.262, W));
+    let atlas = new THREE.Vector3(0, lerp(0.098, 0.118, W), lerp(0.242, 0.258, W)); // walking: neck raised and extended forward
     let gazeOverride = null, extra = {};
     P.jaw = 0; P.lidUp = 0; P.lidLo = 0; P.fluff = 0.06 * shift * 0 + rouseFluff * 0.8; P.fluffBody = rouseFluff; P.breath = breath * (1 - W * 0.5);
     P.flutter = 0;
-    let stab = lerp(0.35, 0.7, W);
+    let stab = lerp(0.35, 0.9, W); // raptors do not head-bob: the head is held steady in space while walking
     if (rouse) { gazeOverride = { yaw: shake * 0.3 * Math.sin(t * TAU * 6), pitch: -0.1, roll: shake * 0.35 * Math.sin(t * TAU * 6 + 0.5) }; stab = 0.2; }
     if (this.action) {
       const A = this.action; A.t += dt;
@@ -389,11 +399,11 @@ export class Animator {
     const settle = bump(t, 3.3, 4.0);
     // notes: jaw opens on each note (intro notes ~0.28 s apart, then a ~9 Hz stutter that fades)
     let jaw = 0, note = 0;
-    for (const n0 of [0.78, 1.08, 1.38]) { const b = bump(t, n0, n0 + 0.2); jaw = Math.max(jaw, 0.52 * b); note = Math.max(note, b); }
+    for (const n0 of [0.78, 1.08, 1.38]) { const b = bump(t, n0, n0 + 0.2); jaw = Math.max(jaw, 0.4 * b); note = Math.max(note, b); }
     if (t > 1.62 && t < 3.0) {
       const k = (t - 1.62) / 1.38;
       const osc = Math.max(0, Math.sin((t - 1.62) * TAU * 9.0));
-      jaw = Math.max(jaw, (0.26 + 0.2 * osc) * (1 - 0.5 * k) * ss(1.62, 1.7, t) * (1 - ss(2.85, 3.0, t)));
+      jaw = Math.max(jaw, (0.2 + 0.14 * osc) * (1 - 0.5 * k) * ss(1.62, 1.7, t) * (1 - ss(2.85, 3.0, t)));
       note = Math.max(note, osc * (1 - 0.6 * k));
     }
     P.jaw = jaw;
@@ -409,7 +419,7 @@ export class Animator {
     P.wingL.wrist -= 0.08 * back; P.wingR.wrist -= 0.08 * back;
     // head: from forward dip to thrown back (world pitch ≈ +115° → bill past vertical), vibrating with the notes
     atlas.set(0, lerp(0.098, 0.17, back) - 0.012 * wind, lerp(0.242, 0.15, back) + 0.02 * wind);
-    const pitch = lerp(-0.08, 2.0, back) - 0.35 * wind + 0.04 * note - 0.12 * settle;
+    const pitch = lerp(-0.08, 1.68, back) - 0.35 * wind + 0.04 * note - 0.12 * settle; // bill to the sky (≈95°)
     return {
       gaze: { yaw: 0.05 * Math.sin(t * 1.3), pitch, roll: 0.03 * Math.sin(t * TAU * 9) * note },
       extra: { upper: -0.95 * back, limit: lerp(1.15, 1.9, back) },

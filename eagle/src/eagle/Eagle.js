@@ -144,7 +144,7 @@ export class Eagle {
     add(wings.flight, M.flight, 'flight-feathers');
     add(wings.covert, M.covert, 'wing-coverts');
     const wskin = buildWingSkin(rig);
-    add(wskin.skin, M.coatWing = createCoatMaterial({ brown: 0x3d2c1e, brownEdge: 0x654a33 }), 'wing-coverts-coat');
+    add(wskin.skin, M.coatWing = createCoatMaterial({ brown: 0x4a3524, brownEdge: 0x765840 }), 'wing-coverts-coat');
     const tail = buildTailPlumage(rig);
     add(tail.flight, M.tail, 'rectrices');
     add(tail.covert, M.tailCovert, 'tail-coverts');
@@ -163,6 +163,8 @@ export class Eagle {
     add(legs.talons, M.talon, 'talons');
     add(legs.shank, M.coat, 'trousers');
     add(legs.feathers, M.contour, 'trouser-feathers');
+    // plumage is lit by the sky as well as the sun (dark brown feathers would otherwise read as black)
+    this.skyLitMaterials = [M.flight, M.covert, M.coat, M.coatWing, M.contour, M.tail, M.tailCovert];
     this.pose = defaultPose();
     this.stats = { bones: rig.bones.length, triangles: this.meshes.reduce((s, m) => s + m.geometry.index.count / 3, 0) };
   }
