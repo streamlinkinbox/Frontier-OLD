@@ -1,13 +1,14 @@
 import * as THREE from 'three';
 import { Rig } from './skeleton.js';
-import { buildWingPlumage, buildTailPlumage, buildWingSkin } from './plumage.js';
-import { buildBodyLoft, buildContourFeathers } from './body.js';
-import { buildHead } from './head.js';
-import { buildLegs } from './legs.js';
+import { buildWingPlumage, buildTailPlumage } from './plumage.js';
+import { buildEnvelope } from './envelope.js';
+import { buildBill, buildEyes } from './face.js';
+import { groomEnvelope, envelopeColors } from './groom.js';
+import { buildFeatherAtlas } from './featherTex.js';
+import { createPlumageMaterial } from './shading.js';
 import { createMaterials, featherUniforms } from './materials.js';
-import { createCoatMaterial } from './coat.js';
 import { BONES, TRUNK } from './anatomy.js';
-import { defaultPose, BIND_POSE, WING_GLIDE, WING_FOLD } from './pose.js';
+import { defaultPose, BIND_POSE, PERCH_BIND, WING_GLIDE, WING_FOLD } from './pose.js';
 
 const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _v3 = new THREE.Vector3();
 const _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _e = new THREE.Euler();
@@ -61,7 +62,7 @@ class NeckSolver {
     let [A, B, E] = this.p;
     const P = new THREE.Vector3(), Qt = new THREE.Quaternion(), P2 = new THREE.Vector3(), Q2 = new THREE.Quaternion();
     const J = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
-    for (let it = 0; it < 4; it++) {
+    for (let it = 0; it < (this.iters || 4); it++) {
       this.fk(A, B, C, Y, E, R, P, Qt);
       const err = [target.x - P.x, target.y - P.y, target.z - P.z];
       if (Math.hypot(...err) < 2e-4) break;
@@ -81,8 +82,8 @@ class NeckSolver {
         let s = 0; for (let k = 0; k < 3; k++) s += JT(r, k) * err[k]; bv[r] = s;
       }
       const d = solve3(Mx, bv);
-      A = clamp(A + clamp(d[0], -0.5, 0.5), -2.2, 2.2);
-      B = clamp(B + clamp(d[1], -0.5, 0.5), -2.6, 2.6);
+      A = clamp(A + clamp(d[0], -0.5, 0.5), -3.2, 3.2);
+      B = clamp(B + clamp(d[1], -0.5, 0.5), -3.8, 3.8);
       E = clamp(E + clamp(d[2], -0.5, 0.5), -3, 3);
     }
     this.p = [A, B, E];
@@ -112,22 +113,22 @@ function solve3(M, b) {
 
 // ------------------------------------------------------------------------------------------------
 export class Eagle {
-  constructor({ quality = 'high' } = {}) {
+  constructor({ quality = 'high', rigOnly = false, clay = false } = {}) {
     const rig = this.rig = new Rig();
     this.object = rig.root;
-    this.materials = createMaterials();
     this.neckSolver = new NeckSolver(rig);
     this.calibration = rig.calibrate(WING_GLIDE, WING_FOLD);
     BIND_POSE.head.pos.copy(this.neckSolver.fk(0, 0, 0, 0, 0, 0, new THREE.Vector3(), new THREE.Quaternion()));
-    // --- bind pose (gliding wing, relaxed legs) → build every mesh in this pose
+    // --- flight bind pose (gliding wing) → wing and tail flight feathers are built in this pose
     this.applyPose(BIND_POSE, { bind: true });
     rig.finalizeBind();
+    this.pose = defaultPose();
+    if (rigOnly) return;
     this.meshes = [];
-    const M = this.materials;
-    const add = (geo, mat, name, { shadow = true, order = 0 } = {}) => {
+    const add = (geo, mat, name, skeleton, { shadow = true, order = 0 } = {}) => {
       const mesh = new THREE.SkinnedMesh(geo, mat);
       mesh.name = name;
-      mesh.bind(rig.skeleton, new THREE.Matrix4());
+      mesh.bind(skeleton, new THREE.Matrix4());
       mesh.frustumCulled = false;
       mesh.castShadow = shadow; mesh.receiveShadow = true;
       mesh.renderOrder = order;
@@ -135,36 +136,47 @@ export class Eagle {
       this.meshes.push(mesh);
       return mesh;
     };
-    const density = quality === 'low' ? 0.6 : quality === 'ultra' ? 1.35 : 1;
-    const loft = buildBodyLoft(rig);
-    M.coat = createCoatMaterial();
-    add(loft.geometry, M.coat, 'body-coat');
-    void buildContourFeathers; void density;
+    const M = this.materials = createMaterials();
+    const flightSkel = rig.skeleton;
     const wings = buildWingPlumage(rig);
-    add(wings.flight, M.flight, 'flight-feathers');
-    add(wings.covert, M.covert, 'wing-coverts');
-    const wskin = buildWingSkin(rig);
-    add(wskin.skin, M.coatWing = createCoatMaterial({ brown: 0x4a3524, brownEdge: 0x765840 }), 'wing-coverts-coat');
+    add(wings.flight, M.flight, 'flight-feathers', flightSkel);
+    add(wings.covert, M.covert, 'wing-coverts', flightSkel);
     const tail = buildTailPlumage(rig);
-    add(tail.flight, M.tail, 'rectrices');
-    add(tail.covert, M.tailCovert, 'tail-coverts');
-    const head = this.head = buildHead(rig);
-    add(head.skull, M.coat, 'head-coat');
-    add(head.headFeathers, M.contour, 'head-feathers');
-    add(head.upperBill, M.beak, 'upper-bill');
-    add(head.lowerBill, M.beak, 'lower-bill');
-    add(head.tongue, M.mouth, 'tongue', { shadow: false });
-    add(head.mouth, M.mouth, 'mouth', { shadow: false });
-    add(head.eyes, M.eye, 'eyes', { shadow: false });
-    add(head.lids, M.lid, 'lids');
-    add(head.nict, M.nict, 'nictitating', { shadow: false, order: 2 });
-    const legs = buildLegs(rig);
-    add(legs.skin, M.foot, 'feet');
-    add(legs.talons, M.talon, 'talons');
-    add(legs.shank, M.coat, 'trousers');
-    add(legs.feathers, M.contour, 'trouser-feathers');
-    // plumage is lit by the sky as well as the sun (dark brown feathers would otherwise read as black)
-    this.skyLitMaterials = [M.flight, M.covert, M.coat, M.coatWing, M.contour, M.tail, M.tailCovert];
+    add(tail.flight, M.tail, 'rectrices', flightSkel);
+    add(tail.covert, M.tailCovert, 'tail-coverts', flightSkel);
+
+    // --- perched bind pose → body envelope, contour plumage, head, feet
+    this.neckSolver.iters = 60; this.neckSolver.p = [0, 0, 0];
+    this.applyPose(PERCH_BIND);
+    this.neckSolver.iters = 6;
+    rig.root.updateMatrixWorld(true);
+    const perchSkel = this.perchSkeleton = new THREE.Skeleton(rig.bones);
+    const env = this.envelope = buildEnvelope(rig);
+    M.clay = new THREE.MeshStandardMaterial({ color: 0xb8b0a4, roughness: 0.85 });
+    if (clay) {
+      M.clay.onBeforeCompile = (sh) => {
+        sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float aAO; varying float vAO;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvAO = aAO;');
+        sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vAO;').replace('#include <aomap_fragment>', '#include <aomap_fragment>\nreflectedLight.indirectDiffuse *= vAO;');
+      };
+    }
+    if (clay) add(env.geometry, M.clay, 'envelope', perchSkel);
+    else {
+      const atlas = this.atlas = buildFeatherAtlas();
+      const groom = this.groom = groomEnvelope(rig, env, { density: quality === 'low' ? 0.6 : 1 });
+      envelopeColors(env, groom.field);
+      M.undercoat = createPlumageMaterial(atlas, { undercoat: true });
+      M.plumage = createPlumageMaterial(atlas);
+      add(env.geometry, M.undercoat, 'envelope', perchSkel);
+      add(groom.geometry, M.plumage, 'contour-feathers', perchSkel);
+    }
+    add(buildBill(rig), M.beak, 'bill', perchSkel);
+    const eyes = buildEyes(rig);
+    add(eyes.ball, M.eye, 'eyes', perchSkel, { shadow: false });
+    add(eyes.lids, M.lid, 'lids', perchSkel);
+    add(eyes.nict, M.nict, 'nictitating', perchSkel, { shadow: false, order: 2 });
+
+    this.applyPose(defaultPose());
+    this.skyLitMaterials = [M.flight, M.covert, M.tail, M.tailCovert, M.plumage, M.undercoat];
     this.pose = defaultPose();
     this.stats = { bones: rig.bones.length, triangles: this.meshes.reduce((s, m) => s + m.geometry.index.count / 3, 0) };
   }

@@ -54,7 +54,7 @@ async function main() {
   const world = new World(scene, renderer);
   await world.buildEnvironment(renderer);
   setLoad(0.4, 'Growing plumage…'); await tick();
-  const eagle = new Eagle({ quality: params.get('q') || 'high' });
+  const eagle = new Eagle({ quality: params.get('q') || 'high', clay: params.has('clay') });
   scene.add(eagle.object);
   // plumage gets a stronger share of sky light than the terrain (dark feathers otherwise read as black)
   for (const m of eagle.skyLitMaterials) if (m) { m.envMap = scene.environment; m.envMapIntensity = 1.0; m.needsUpdate = true; }

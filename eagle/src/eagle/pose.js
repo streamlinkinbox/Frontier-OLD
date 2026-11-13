@@ -77,3 +77,26 @@ export function lerpPose(a, b, t, out) {
   }
   return t < 0.5 ? a : b;
 }
+
+// Perched "rest" pose used as the bind pose of the body envelope, contour plumage, head and feet
+// (the shape the bird is seen in most; flight stretches the neck from here).
+export const PERCH_BIND = (() => {
+  const p = defaultPose();
+  p.pitch = 0.64; p.trunkOff.set(0, 0.296, 0);
+  p.wingL = { ...WING_FOLD }; p.wingR = { ...WING_FOLD };
+  p.tail = { pitch: -0.04, yaw: 0, roll: 0, spread: 0.05, bend: 0, asym: 0, fluff: 0 };
+  p.head.pos.set(0, 0.098, 0.242);
+  // head level in the world (gaze pitch −0.08) → expressed in trunk space
+  const qAct = new THREE.Quaternion().setFromEuler(new THREE.Euler(-p.pitch, 0, 0, 'YXZ'));
+  const qWant = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.08, 0, 0, 'YXZ'));
+  p.head.q = qAct.invert().multiply(qWant);
+  for (const s of [0, 1]) {
+    const sx = s === 0 ? 1 : -1;
+    const L = leg({ femurPitch: 0.9, femurSplay: 0.18 });
+    L.world = new THREE.Vector3(sx * 0.072, 0.012, 0.035);
+    L.fwd = new THREE.Vector3(Math.sin(sx * 0.1), 0, Math.cos(sx * 0.1));
+    L.up = new THREE.Vector3(0, 1, 0);
+    if (s === 0) p.legL = L; else p.legR = L;
+  }
+  return p;
+})();

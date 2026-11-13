@@ -148,6 +148,7 @@ export class Rig {
       this.neck.push(b); parent = b;
     }
     this.head = this.bone('head', parent, [0, 0, seg]);
+    this.head.scale.setScalar(1.1); // adult female head (culmen ≈ 6.4 cm)
     this.upperBill = this.bone('upperBill', this.head, [0, 0.028, 0.088]); // craniofacial hinge
     this.jaw = this.bone('jaw', this.head, [0, -0.004, 0.036]);             // quadrate–mandible joint
     this.eyes = [];
