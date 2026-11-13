@@ -109,21 +109,23 @@ export class PlumageField {
     // ---- length / type
     let L, type, aspect;
     const headL = hl.z > 0.074 ? 0.0065 : lerp(0.009, 0.019, ss(0.07, -0.01, hl.z)) * (1 + 0.25 * ss(0.0, -0.02, hl.y));
-    const neckL = lerp(0.032, 0.058, ss(0.0, this.neckLen, nc.s));
+    const neckL = lerp(0.03, 0.044, ss(0.0, this.neckLen, nc.s));
     const bodyL = lerp(0.052, 0.07, ss(0.0, -0.12, tl.z)) * (1 + 0.15 * ventral);
     const legL = 0.08;
     L = headL * g.head + neckL * g.neck + bodyL * g.body + legL * g.leg;
     const dom = Object.entries(g).sort((a, b) => b[1] - a[1])[0][0];
     if (dom === 'head') { type = FTYPE.head; aspect = 0.42; }
-    else if (dom === 'neck') { type = FTYPE.hackle; aspect = 0.33; }
+    else if (dom === 'neck') { type = FTYPE.hackle; aspect = 0.42; }
     else if (dom === 'leg') { type = FTYPE.fluff; aspect = 0.5; }
     else { type = FTYPE.contour; aspect = 0.62; }
     // vent / under-tail: white, loose
-    const vent = ss(-0.12, -0.17, tl.z) * ss(0.02, -0.03, tl.y);
+    const vent = ss(-0.15, -0.19, tl.z) * ss(0.02, -0.03, tl.y);
     const rump = ss(-0.14, -0.18, tl.z) * ss(-0.01, 0.02, tl.y);
     // ---- white hood: head + neck down to its base (lower on the throat/upper breast than on the nape)
-    const sw = this.neckLen * (0.84 + 0.22 * ventral);
-    const hood = g.head + (g.neck + g.body * 0.6) * ss(sw + 0.012, sw - 0.012, nc.s);
+    // hood boundary (perched bind, world space): a ring at the base of the neck — level with the
+    // shoulders at the nape, dropping forward onto the upper breast, with a pointed bib at the centre
+    const yb = 0.434 - (p.z - 0.018) * 0.24 - 0.018 * Math.exp(-((p.x / 0.032) ** 2)) * ss(0.07, 0.15, p.z);
+    const hood = Math.max(g.head, ss(yb - 0.006, yb + 0.006, p.y));
     const white = clamp01(Math.max(hood, vent, rump));
     if (vent > 0.5 && type === FTYPE.contour) type = FTYPE.fluff;
     return { g, dir, L, type, aspect, white, ventral, hl, tl, neckS: nc.s, dom, vent };

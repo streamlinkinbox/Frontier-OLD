@@ -337,16 +337,16 @@ export class Rig {
         // high-frequency flutter of the free feather tips
         bend += (w.flutter || 0) * 0.02 * (0.3 + o) * Math.sin(t * (41 + f.i * 3.7) + f.i * 1.3) * (1 - fold);
         // in the folded wing the primaries tilt slightly so their tips lie in a tidy stack
-        lift += fold * (0.02 + 0.006 * f.i);
+        lift += fold * (-0.07 + 0.003 * f.i);
         // folded: the primaries roll about their shafts so the stack lies flat over the closed tail
         // (seen from behind the wingtips read as two dark bands over the white tail, not edge-on blades)
         twist += (w.foldRoll || 0) * fold * (0.35 + 0.65 * o);
       } else if (f.kind === 'secondary') {
         bend = w.bend * 0.18 * (1 - fold) + (w.flutter || 0) * 0.012 * Math.sin(t * (33 + f.i * 2.1) + f.i) * (1 - fold);
         twist = -w.fpitch * 0.12 * (1 - f.i / 14);
-        lift = fold * 0.015;
+        lift = fold * (-0.09 + 0.002 * f.i);
       } else if (f.kind === 'tertial') {
-        lift = fold * 0.02;
+        lift = fold * -0.07;
       } else if (f.kind === 'alula') {
         phi += w.alula * 18;
         lift = -0.35 * w.alula;
@@ -356,7 +356,7 @@ export class Rig {
       } else if (f.ventral) {
         lift = -0.04 - 0.05 * fold;
       } else { // dorsal coverts lie flat on the feathers under them; lift a touch when the wing is loaded
-        lift = 0.025 + 0.02 * w.bend * (1 - fold) + (w.fluff || 0) * 0.18;
+        lift = 0.025 - 0.07 * fold + 0.02 * w.bend * (1 - fold) + (w.fluff || 0) * 0.18;
       }
       if (f.kind === 'gsc' || f.kind === 'msc' || f.kind === 'gpc') lift += (w.flutter || 0) * 0.02 * Math.sin(t * 27 + f.i * 2.3);
       f.base.rotation.set(-lift, Math.PI - phi * deg, twist, 'YXZ');

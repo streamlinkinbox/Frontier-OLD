@@ -20,7 +20,7 @@ function featherColor(base, rand, { baseAO = 0.55, aoEnd = 0.35, fringe = 0.06, 
   };
 }
 
-export function buildWingPlumage(rig) {
+export function buildWingPlumage(rig, opts = {}) {
   const flight = new SkinBuilder();
   const covert = new SkinBuilder();
   const R = rng(4242);
@@ -58,6 +58,7 @@ export function buildWingPlumage(rig) {
           target = flight; kind = 2;
           break;
         default: {
+          if (!opts.coverts) continue;
           // coverts, alula, scapulars, axillaries
           const nt = f.len > 0.1 ? 10 : 7;
           const ventral = !!f.ventral;
@@ -121,6 +122,16 @@ export function buildTailPlumage(rig) {
 
 
 
+export const COLLAPSE = 0.62;
+export function collapseAt(u, uWr) { return ss(uWr + 0.03, uWr - 0.05, u); }
+// point on an airfoil row at chord fraction v (0 leading → 1 trailing), top or bottom surface
+export function sampleRow(row, NAIR, v, top) {
+  const H = NAIR / 2;
+  const af = top ? (1 - Math.min(1, Math.max(0, v))) * H : H + Math.min(1, Math.max(0, v)) * H;
+  const a0 = Math.min(NAIR - 1, Math.floor(af)), f = af - a0;
+  return row[a0].P.clone().lerp(row[a0 + 1].P, f);
+}
+
 function mergeW(list) {
   const m = new Map();
   for (const [b, w] of list) if (w > 1e-4) m.set(b, (m.get(b) || 0) + w);
@@ -129,8 +140,10 @@ function mergeW(list) {
   return arr.map(([b, w]) => [b, w / tot]);
 }
 
-export function buildWingSkin(rig) {
+export function buildWingSkin(rig, opts = {}) {
   rig.root.updateMatrixWorld(true);
+  const rowsBySide = [];
+  const morph = [];
   const pos = [], col = [], si = [], sw = [], idx = [];
   const coatA = [];
   const feathers = new SkinBuilder();
@@ -180,7 +193,8 @@ export function buildWingSkin(rig) {
       if (bi < 3 && d > segs[bi] - jb) { const f = 0.5 * (1 - (segs[bi] - d) / jb); add(chain[bi + 1], f); wBone -= f; }
       add(bone, wBone);
       const trailW = mergeW(wl);
-      const leadW = bi < 2 ? mergeW([[I(S.humerus), 1 - uArm], [I(S.ulna), uArm * 0.7], [I(S.hand), uArm * 0.3]]) : trailW;
+      // rigid per segment: the propatagium collapses with a fold morph instead of being stretched between bones
+      const leadW = trailW;
       const rootF = ss(0.1, 0.0, u) * 0.5;
       const row = [];
       for (let a = 0; a <= NAIR; a++) {
@@ -228,8 +242,25 @@ export function buildWingSkin(rig) {
     }
     base += (NSPAN + 1) * (NAIR + 1);
 
-    // lesser + marginal coverts (dorsal) and underwing lesser coverts (ventral)
-    for (const top of [true, false]) {
+    // fold corrective: the elastic propatagium and the covert-covered leading edge of the arm collapse
+    // toward the bone line as the elbow folds (morph target 0, driven by the elbow fold fraction)
+    {
+      const uWr = (segs[0] + segs[1]) / total;
+      for (let k = 0; k <= NSPAN; k++) {
+        const r = surfRows[k];
+        const c = collapseAt(r.u, uWr);
+        r.collapse = c;
+        for (let a = 0; a <= NAIR; a++) {
+          const e = r.row[a];
+          const v2 = e.v + c * COLLAPSE * (1 - e.v);
+          const q = sampleRow(r.row, NAIR, v2, e.top);
+          morph.push(q.x - e.P.x, q.y - e.P.y, q.z - e.P.z);
+        }
+      }
+    }
+    rowsBySide.push({ rows: surfRows, mirrored, NAIR });
+    // (lesser + marginal coverts are groomed by wingCoat.js)
+    for (const top of (opts.coverts ? [true, false] : [])) {
       for (let k = 0; k < NSPAN; k += 1) {
         const r0 = surfRows[k], r1 = surfRows[k + 1];
         const u = r0.u;
@@ -267,6 +298,8 @@ export function buildWingSkin(rig) {
   g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sw, 4));
   g.setIndex(idx);
   g.computeVertexNormals();
+  g.morphAttributes.position = [new THREE.Float32BufferAttribute(morph, 3)];
+  g.morphTargetsRelative = true;
   const nV = pos.length / 3;
   g.setAttribute('aCoat', new THREE.Float32BufferAttribute(coatA, 2));
   g.setAttribute('aWhite', new THREE.BufferAttribute(new Float32Array(nV), 1));
@@ -276,6 +309,6 @@ export function buildWingSkin(rig) {
   fg.setAttribute('aBaseNormal', new THREE.Float32BufferAttribute(aBaseNormal, 3));
   fg.setAttribute('aLen', new THREE.Float32BufferAttribute(aLen, 1));
   fg.setAttribute('aMask', new THREE.Float32BufferAttribute(aMask, 1));
-  return { skin: g, feathers: fg };
+  return { skin: g, feathers: fg, sides: rowsBySide };
 }
 const lerp = (a, b, t) => a + (b - a) * t;

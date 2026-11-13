@@ -6,6 +6,8 @@ import { buildBill, buildEyes } from './face.js';
 import { groomEnvelope, envelopeColors } from './groom.js';
 import { buildFeatherAtlas } from './featherTex.js';
 import { createPlumageMaterial } from './shading.js';
+import { buildWingCoat } from './wingCoat.js';
+import { buildLegs } from './legs.js';
 import { createMaterials, featherUniforms } from './materials.js';
 import { BONES, TRUNK } from './anatomy.js';
 import { defaultPose, BIND_POSE, PERCH_BIND, WING_GLIDE, WING_FOLD } from './pose.js';
@@ -140,7 +142,11 @@ export class Eagle {
     const flightSkel = rig.skeleton;
     const wings = buildWingPlumage(rig);
     add(wings.flight, M.flight, 'flight-feathers', flightSkel);
-    add(wings.covert, M.covert, 'wing-coverts', flightSkel);
+    const atlas = this.atlas = buildFeatherAtlas();
+    M.undercoat = createPlumageMaterial(atlas, { undercoat: true });
+    M.plumage = createPlumageMaterial(atlas);
+    const wingCoat = buildWingCoat(rig);
+    this.foldMeshes = [add(wingCoat.skin, M.undercoat, 'wing-skin', flightSkel), add(wingCoat.coverts, M.plumage, 'wing-coverts', flightSkel)];
     const tail = buildTailPlumage(rig);
     add(tail.flight, M.tail, 'rectrices', flightSkel);
     add(tail.covert, M.tailCovert, 'tail-coverts', flightSkel);
@@ -161,14 +167,15 @@ export class Eagle {
     }
     if (clay) add(env.geometry, M.clay, 'envelope', perchSkel);
     else {
-      const atlas = this.atlas = buildFeatherAtlas();
       const groom = this.groom = groomEnvelope(rig, env, { density: quality === 'low' ? 0.6 : 1 });
       envelopeColors(env, groom.field);
-      M.undercoat = createPlumageMaterial(atlas, { undercoat: true });
-      M.plumage = createPlumageMaterial(atlas);
       add(env.geometry, M.undercoat, 'envelope', perchSkel);
       add(groom.geometry, M.plumage, 'contour-feathers', perchSkel);
     }
+    // bare yellow tarsi, padded toes, black talons (perched bind pose)
+    const legs = buildLegs(rig);
+    add(legs.skin, M.foot, 'feet', perchSkel);
+    add(legs.talons, M.talon, 'talons', perchSkel);
     add(buildBill(rig), M.beak, 'bill', perchSkel);
     const eyes = buildEyes(rig);
     add(eyes.ball, M.eye, 'eyes', perchSkel, { shadow: false });
@@ -284,6 +291,12 @@ export class Eagle {
       this.solveLeg(s, foot, fwd, up, L.femurPitch, L.femurSplay, L.toeCurl, L.toeSpread);
     }
     root.updateMatrixWorld(true);
+    // wing fold correctives (propatagium collapse) — elbow fold fraction, both wings share the mesh
+    if (this.foldMeshes) {
+      const fe = (s) => { const t = clamp((s.elbow - 0.5) / 2.2, 0, 1); return t * t * (3 - 2 * t); };
+      const f = 0.5 * (fe(P.wingL) + fe(P.wingR));
+      for (const m of this.foldMeshes) m.morphTargetInfluences[0] = f;
+    }
     // feather shader state
     featherUniforms.uFluff.value = P.fluff;
     featherUniforms.uFluffBody.value = P.fluffBody;

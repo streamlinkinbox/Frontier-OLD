@@ -58,9 +58,9 @@ export class Sculpt {
 
     // ---------------- trunk (trunk-local: +z forward along the spine, +y dorsal, +x left)
     const T = this.trunkInv, tb = I(rig.trunk), tl = I(rig.tail);
-    P('body', tb, T, 0.0, (x, y, z) => sdEllipsoid(x, y + 0.004, z + 0.02, 0.08, 0.076, 0.158));         // torso
-    P('body', tb, T, 0.05, (x, y, z) => sdEllipsoid(x, y + 0.024, z - 0.052, 0.078, 0.084, 0.084));      // breast
-    P('body', tb, T, 0.05, (x, y, z) => sdEllipsoid(x, y + 0.046, z + 0.088, 0.07, 0.058, 0.098));      // belly
+    P('body', tb, T, 0.0, (x, y, z) => sdEllipsoid(x, y + 0.008, z + 0.02, 0.086, 0.088, 0.168));        // torso
+    P('body', tb, T, 0.05, (x, y, z) => sdEllipsoid(x, y + 0.036, z - 0.056, 0.084, 0.098, 0.092));      // breast
+    P('body', tb, T, 0.05, (x, y, z) => sdEllipsoid(x, y + 0.058, z + 0.088, 0.074, 0.068, 0.104));      // belly
     P('body', tb, T, 0.04, (x, y, z) => sdEllipsoid(Math.abs(x) - 0.048, y - 0.034, z - 0.058, 0.05, 0.038, 0.074)); // mantle / shoulders
     P('body', tb, T, 0.05, (x, y, z) => sdEllipsoid(x, y - 0.026, z - 0.112, 0.056, 0.05, 0.05));       // neck base / crop
     P('body', tl, T, 0.04, (x, y, z) => sdEllipsoid(x, y + 0.012, z + 0.178, 0.04, 0.028, 0.06));       // vent / undertail
