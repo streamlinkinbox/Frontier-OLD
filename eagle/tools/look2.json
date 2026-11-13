@@ -1,0 +1,7 @@
+[
+ {"eval":"(()=>{__game.step(60); return __game.world.stoneCount})()"},{"shot":"default"},
+ {"eval":"(()=>{__game.setPreset('side'); __game.step(2); return 1})()"},{"shot":"side"},
+ {"eval":"(()=>{__game.cam.azim=2.6; __game.cam.elev=0.1; __game.cam.dist=4; __game.setPreset('orbit'); __game.step(2); return 1})()"},{"shot":"wide"},
+ {"eval":"(()=>{__game.cam.azim=0.75; __game.cam.elev=0.5; __game.cam.dist=1.6; __game.step(2); return 1})()"},{"shot":"ground"},
+ {"eval":"(()=>{__game.cam.dist=2.3; __game.cam.elev=0.14; __game.anim.trigger('glide'); __game.step(200); return __game.anim.label})()"},{"shot":"glide"}
+]

@@ -72,7 +72,7 @@ const lerpWing = (a, b, t, o = {}) => { for (const k of WING_KEYS) o[k] = lerp(a
 // Walk
 const WALK = { freq: 1.25, duty: 0.62, stride: 0.21, lift: 0.055, halfWidth: 0.072, footZ: 0.035, radius: 2.4 };
 // Flight path: a wide circle over the lake
-const FLIGHT = { radius: 32, alt: 24, flapSpeed: 11, glideSpeed: 12 };
+const FLIGHT = { radius: 29, alt: 62, flapSpeed: 11, glideSpeed: 12 }; // circle stays over open water
 
 export class Animator {
   constructor(eagle, { ground, lake }) {
