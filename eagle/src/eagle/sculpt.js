@@ -58,13 +58,24 @@ export class Sculpt {
 
     // ---------------- trunk (trunk-local: +z forward along the spine, +y dorsal, +x left)
     const T = this.trunkInv, tb = I(rig.trunk), tl = I(rig.tail);
-    P('body', tb, T, 0.0, (x, y, z) => sdEllipsoid(x, y + 0.008, z + 0.02, 0.086, 0.088, 0.168));        // torso
-    P('body', tb, T, 0.05, (x, y, z) => sdEllipsoid(x, y + 0.036, z - 0.056, 0.084, 0.098, 0.092));      // breast
-    P('body', tb, T, 0.05, (x, y, z) => sdEllipsoid(x, y + 0.058, z + 0.088, 0.074, 0.068, 0.104));      // belly
-    P('body', tb, T, 0.04, (x, y, z) => sdEllipsoid(Math.abs(x) - 0.048, y - 0.034, z - 0.058, 0.05, 0.038, 0.074)); // mantle / shoulders
+    P('body', tb, T, 0.0, (x, y, z) => sdEllipsoid(x, y + 0.008, z + 0.02, 0.074, 0.088, 0.168));        // torso
+    P('body', tb, T, 0.05, (x, y, z) => sdEllipsoid(x, y + 0.036, z - 0.056, 0.078, 0.098, 0.092));      // breast
+    P('body', tb, T, 0.05, (x, y, z) => sdEllipsoid(x, y + 0.058, z + 0.088, 0.068, 0.068, 0.104));      // belly
+    P('body', tb, T, 0.05, (x, y, z) => sdEllipsoid(Math.abs(x) - 0.03, y + 0.02, z + 0.05, 0.05, 0.06, 0.12));      // flanks (side feathers close up under the folded wing)
+    P('body', tb, T, 0.04, (x, y, z) => sdEllipsoid(Math.abs(x) - 0.038, y - 0.034, z - 0.058, 0.045, 0.036, 0.074)); // mantle / shoulders
     P('body', tb, T, 0.05, (x, y, z) => sdEllipsoid(x, y - 0.026, z - 0.112, 0.056, 0.05, 0.05));       // neck base / crop
     P('body', tl, T, 0.04, (x, y, z) => sdEllipsoid(x, y + 0.012, z + 0.178, 0.04, 0.028, 0.06));       // vent / undertail
     P('body', tl, T, 0.04, (x, y, z) => sdEllipsoid(x, y - 0.026, z + 0.168, 0.046, 0.022, 0.068));     // rump / uppertail coverts
+
+    // breast-side "pocket": the side/breast feathers close over the wrist of the folded wing (the
+    // leading end of the folded flight-feather stack is never exposed from the front)
+    for (const Sd of rig.sides) {
+      const wr = Sd.hand.getWorldPosition(new THREE.Vector3());
+      const hd = new THREE.Vector3(1, 0, 0).transformDirection(Sd.hand.matrixWorld); // along the hand
+      const a = wr.clone().addScaledVector(hd, -0.012), b = wr.clone().addScaledVector(hd, 0.075);
+      a.x *= 0.82; b.x *= 0.8; // a little medial of the bone line
+      P('body', tb, null, 0.035, (x, y, z) => sdRoundCone(x, y, z, a, b, 0.034, 0.024));
+    }
 
     // ---------------- neck: round cones along the vertebral chain (the column runs in the dorsal
     // half of the feathered neck → the feathered tube is offset ventrally)

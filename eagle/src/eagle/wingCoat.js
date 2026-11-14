@@ -201,3 +201,52 @@ export function buildWingCoat(rig) {
   }
   return { skin: skin.skin, coverts: B.build(), count: B.cards };
 }
+
+// ------------------------------------------------------------------------------------------------
+// Tail coverts (flight bind pose, tail bone): three overlapping rows of white upper coverts over the
+// rectrix bases (longest row behind, shorter rows toward the rump) and two rows of soft, loose white
+// under-tail coverts. Same feather atlas / plumage shading as the body.
+export function buildTailCoverts(rig) {
+  rig.root.updateMatrixWorld(true);
+  const B = new CardBuffer();
+  const R = rng(5150);
+  const tb = rig.tail.userData.index, trunkI = rig.trunk.userData.index;
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler();
+  const white = C(0xf0eee8), shade = C(0xd8d4cb);
+  const rows = [
+    // [ventral, count per side, length (inner→outer), z (forward offset), y, lift, x spread]
+    [false, 8, [0.15, 0.105], 0.05, 0.016, 0.07, 0.04],
+    [false, 7, [0.11, 0.08], 0.085, 0.022, 0.08, 0.036],
+    [false, 6, [0.075, 0.06], 0.115, 0.026, 0.1, 0.03],
+    [true, 7, [0.14, 0.09], 0.05, -0.018, 0.1, 0.036],
+    [true, 6, [0.1, 0.07], 0.085, -0.024, 0.14, 0.03],
+  ];
+  for (const [ventral, n, [l0, l1], z0, y0, lift, xs] of rows) {
+    for (let side = 0; side < 2; side++) for (let i = 0; i < n; i++) {
+      const u = (i + 0.5 * R()) / n;
+      const len = lerp(l0, l1, u) * (0.92 + 0.16 * R());
+      const x = (0.003 + u * xs) * (side ? -1 : 1);
+      const psi = (2 + u * 16 + (R() - 0.5) * 4) * (side ? -1 : 1) * Math.PI / 180;
+      e.set(ventral ? 0.1 : -0.07, Math.PI - psi, 0, 'YXZ');
+      q.setFromEuler(e);
+      m.compose(new THREE.Vector3(x, y0 - 0.004 * u, z0 - 0.016 * u), q, new THREE.Vector3(1, 1, 1)).premultiply(rig.tail.matrixWorld);
+      const nW = new THREE.Vector3(0, ventral ? -1 : 1, 0).transformDirection(m);
+      const dW = new THREE.Vector3(0, 0, 1).transformDirection(m);
+      const xW = new THREE.Vector3(1, 0, 0).transformDirection(m);
+      const width = len * (ventral ? 0.55 : 0.48) * (0.9 + 0.2 * R());
+      const card = [];
+      const NR = 6;
+      for (let t = 0; t <= NR; t++) {
+        const tt = t / NR;
+        const c = new THREE.Vector3().setFromMatrixPosition(m).addScaledVector(dW, tt * len);
+        const h = len * (lift * tt - 0.5 * lift * tt * tt);
+        const wT = 0.35 * (1 - tt);
+        card.push({ c, n: nW, d: dW, x: xW.clone().multiplyScalar(width * 0.5), w: [[tb, 1 - wT], [trunkI, wT]], h, slope: lift * (1 - tt) });
+      }
+      const base = white.clone().multiplyScalar(0.94 + 0.06 * R());
+      const tip = base.clone().lerp(shade, 0.15);
+      B.add(card, { uv: cellUV(ventral ? FTYPE.fluff : FTYPE.covert, Math.floor(R() * 2)), base, tip, rnd: R(), len, ao: ventral ? 0.8 : 0.95 });
+    }
+  }
+  return B.build();
+}

@@ -250,9 +250,11 @@ export function buildWingSkin(rig, opts = {}) {
         const r = surfRows[k];
         const c = collapseAt(r.u, uWr);
         r.collapse = c;
+        // the skin itself folds away almost completely (it is only the dark under-layer; in the closed
+        // wing the coverts lie on the body plumage) → no membrane folds or spikes at elbow / wrist
         for (let a = 0; a <= NAIR; a++) {
           const e = r.row[a];
-          const v2 = e.v + c * COLLAPSE * (1 - e.v);
+          const v2 = e.v + 0.92 * (1 - e.v);
           const q = sampleRow(r.row, NAIR, v2, e.top);
           morph.push(q.x - e.P.x, q.y - e.P.y, q.z - e.P.z);
         }

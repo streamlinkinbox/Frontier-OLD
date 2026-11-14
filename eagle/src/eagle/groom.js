@@ -119,7 +119,8 @@ export class PlumageField {
     else if (dom === 'leg') { type = FTYPE.fluff; aspect = 0.5; }
     else { type = FTYPE.contour; aspect = 0.62; }
     // vent / under-tail: white, loose
-    const vent = ss(-0.15, -0.19, tl.z) * ss(0.02, -0.03, tl.y);
+    // white under-tail coverts: only behind the legs, under the tail (world bind space)
+    const vent = ss(-0.1, -0.135, p.z) * ss(0.24, 0.2, p.y);
     const rump = ss(-0.14, -0.18, tl.z) * ss(-0.01, 0.02, tl.y);
     // ---- white hood: head + neck down to its base (lower on the throat/upper breast than on the nape)
     // hood boundary (perched bind, world space): a ring at the base of the neck — level with the

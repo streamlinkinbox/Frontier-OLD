@@ -6,7 +6,7 @@ import { buildBill, buildEyes } from './face.js';
 import { groomEnvelope, envelopeColors } from './groom.js';
 import { buildFeatherAtlas } from './featherTex.js';
 import { createPlumageMaterial } from './shading.js';
-import { buildWingCoat } from './wingCoat.js';
+import { buildWingCoat, buildTailCoverts } from './wingCoat.js';
 import { buildLegs } from './legs.js';
 import { createMaterials, featherUniforms } from './materials.js';
 import { BONES, TRUNK } from './anatomy.js';
@@ -146,10 +146,10 @@ export class Eagle {
     M.undercoat = createPlumageMaterial(atlas, { undercoat: true });
     M.plumage = createPlumageMaterial(atlas);
     const wingCoat = buildWingCoat(rig);
+    add(buildTailCoverts(rig), M.plumage, 'tail-coverts', flightSkel);
     this.foldMeshes = [add(wingCoat.skin, M.undercoat, 'wing-skin', flightSkel), add(wingCoat.coverts, M.plumage, 'wing-coverts', flightSkel)];
     const tail = buildTailPlumage(rig);
     add(tail.flight, M.tail, 'rectrices', flightSkel);
-    add(tail.covert, M.tailCovert, 'tail-coverts', flightSkel);
 
     // --- perched bind pose → body envelope, contour plumage, head, feet
     this.neckSolver.iters = 60; this.neckSolver.p = [0, 0, 0];
@@ -296,6 +296,7 @@ export class Eagle {
       const fe = (s) => { const t = clamp((s.elbow - 0.5) / 2.2, 0, 1); return t * t * (3 - 2 * t); };
       const f = 0.5 * (fe(P.wingL) + fe(P.wingR));
       for (const m of this.foldMeshes) m.morphTargetInfluences[0] = f;
+      featherUniforms.uFold.value = f;
     }
     // feather shader state
     featherUniforms.uFluff.value = P.fluff;

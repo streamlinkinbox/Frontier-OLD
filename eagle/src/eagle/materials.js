@@ -9,6 +9,7 @@ export const featherUniforms = {
   uFluffBody: { value: 0 },  // body plumage fluffing (rousing, cold)
   uFlutter: { value: 0 },    // airflow flutter (0 perched … 1 fast flight)
   uBreath: { value: 0 },     // breathing expansion (−1 … 1)
+  uFold: { value: 0 },       // wing fold fraction (folded flight feathers: undersides lie against the body, in its shadow)
   uNormBlend: { value: 0.72 }, // contour plumage shades as one soft surface (feather vanes lie on the skin)
 };
 
@@ -36,10 +37,12 @@ function patchFeather(mat, { fluff = false, backTint = [1.1, 1.08, 1.05], sheen 
         ` : ''}`);
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', `#include <common>
+        uniform float uFold;
         varying float vT;`)
       .replace('#include <color_fragment>', `#include <color_fragment>
-        // ventral surfaces of flight feathers are paler/greyer; strong forward scattering at grazing angles
-        if (!gl_FrontFacing) diffuseColor.rgb *= vec3(${backTint.map((v) => v.toFixed(3)).join(',')});`)
+        // ventral surfaces of flight feathers are paler/greyer; strong forward scattering at grazing angles.
+        // In the closed wing the undersides face the flank, in its shadow → occluded instead of pale.
+        if (!gl_FrontFacing) diffuseColor.rgb *= mix(vec3(${backTint.map((v) => v.toFixed(3)).join(',')}), vec3(0.45), uFold);`)
       .replace('#include <lights_fragment_end>', `#include <lights_fragment_end>
         {
           // thin keratin barbules: soft sheen at grazing view angles
