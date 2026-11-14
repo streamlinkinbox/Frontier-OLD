@@ -445,7 +445,8 @@ export class Animator {
     P.tail.yaw -= 0.08 * d * turn;
     // the atlas swings round toward the shoulder and rises
     const ay = yaw * 0.28;
-    atlas.set(Math.sin(ay) * 0.24 * 0.55, 0.098 + 0.03 * turn, 0.242 * lerp(1, 0.55, turn));
+    // raptors swivel the head almost in place on the twisting cervical column: small lateral shift only
+    atlas.set(Math.sin(ay) * 0.035, 0.098 + 0.02 * turn, 0.242 * lerp(1, 0.86, turn));
     return { gaze: { yaw, pitch, roll }, extra: { neckYawK: 0.3, neckRollK: 0.45 }, stab: 0.3 };
   }
 

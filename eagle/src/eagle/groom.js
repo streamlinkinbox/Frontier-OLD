@@ -125,11 +125,13 @@ export class PlumageField {
     // ---- white hood: head + neck down to its base (lower on the throat/upper breast than on the nape)
     // hood boundary (perched bind, world space): a ring at the base of the neck — level with the
     // shoulders at the nape, dropping forward onto the upper breast, with a pointed bib at the centre
-    const yb = 0.434 - (p.z - 0.018) * 0.24 - 0.018 * Math.exp(-((p.x / 0.032) ** 2)) * ss(0.07, 0.15, p.z);
+    // + low-frequency raggedness (irregular feather tracts, not a row of evenly spaced teeth)
+    const rag = 0.006 * Math.sin(p.x * 83 + 1.3) + 0.004 * Math.sin(p.x * 151 + p.z * 40 + 0.4) + 0.003 * Math.sin(p.z * 120 + 2.1);
+    const yb = 0.434 - (p.z - 0.018) * 0.24 - 0.018 * Math.exp(-((p.x / 0.032) ** 2)) * ss(0.07, 0.15, p.z) + rag;
     const hood = Math.max(g.head, ss(yb - 0.006, yb + 0.006, p.y));
     const white = clamp01(Math.max(hood, vent, rump));
     if (vent > 0.5 && type === FTYPE.contour) type = FTYPE.fluff;
-    return { g, dir, L, type, aspect, white, ventral, hl, tl, neckS: nc.s, dom, vent };
+    return { g, dir, L, type, aspect, white, ventral, hl, tl, neckS: nc.s, dom, vent, hoodD: g.head > 0.5 ? 1 : p.y - yb };
   }
 }
 
@@ -223,8 +225,12 @@ export function groomEnvelope(rig, env, { density = 1, seed = 7 } = {}) {
     const pr = e.props;
     if (pr.type === FTYPE.head && eyeHit(e.p)) continue;
     const rnd = R();
-    const L = pr.L * (0.85 + 0.3 * R());
-    const width = L * pr.aspect * (0.9 + 0.2 * R());
+    const wv = clamp01(pr.white + (R() - 0.5) * 0.25);
+    const isWhite = wv > 0.5;
+    // white hackles right at the hood edge are shorter and broader: a soft ragged margin, not icicles
+    const edge = isWhite ? 1 - ss(0.004, 0.03, Math.abs(pr.hoodD)) : 0;
+    const L = pr.L * (0.85 + 0.3 * R()) * (1 - 0.38 * edge);
+    const width = L * pr.aspect * (0.9 + 0.2 * R()) * (1 + 0.4 * edge);
     const H = L * (pr.type === FTYPE.head ? 0.085 : pr.type === FTYPE.hackle ? 0.11 : pr.type === FTYPE.fluff ? 0.14 : 0.075) + 0.0006;
     // direction with a little natural scatter
     d.copy(pr.dir).addScaledVector(e.n, -pr.dir.dot(e.n)).normalize();
@@ -247,8 +253,6 @@ export function groomEnvelope(rig, env, { density = 1, seed = 7 } = {}) {
     }
     rowD[0].copy(rowD[1]);
     // per-feather colour
-    const wv = clamp01(pr.white + (R() - 0.5) * 0.25);
-    const isWhite = wv > 0.5;
     const base = isWhite ? white.clone().multiplyScalar(0.92 + 0.08 * R()) : brown.clone().lerp(PLUMAGE.brownWarm, R() * 0.8).multiplyScalar(0.8 + 0.4 * R());
     const fringeAmt = isWhite ? 0 : (pr.dom === 'body' ? lerp(0.25, 0.55, 1 - pr.ventral) : 0.2) * (0.6 + 0.8 * R());
     const tipC = isWhite ? base.clone().multiplyScalar(1.02) : base.clone().lerp(PLUMAGE.brownFringe, fringeAmt);
