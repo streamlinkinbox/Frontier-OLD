@@ -322,7 +322,7 @@ export class Animator {
 
     // ---- trunk
     P.pos.copy(g.pos); P.yaw = g.yaw;
-    const basePitch = lerp(0.64, 0.58, W);             // upright perch → body inclined ~40° while walking (eagles stay fairly upright)
+    const basePitch = lerp(0.9, 0.58, W);             // upright perch → body inclined ~40° while walking (eagles stay fairly upright)
     const baseY = lerp(0.296, 0.28, W); // perched: knees well flexed so the trousers hang to the tarsus
     const meanOff = new THREE.Vector3(0, baseY + 0.0012 * breath, 0.0);
     P.trunkOff.set(walkShift + 0.012 * shift + shake * 0.004 * Math.sin(t * TAU * 5.5), baseY + walkBob + 0.0012 * breath - 0.004 * rouseFluff, walkSurge);

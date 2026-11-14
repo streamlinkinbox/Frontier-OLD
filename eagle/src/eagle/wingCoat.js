@@ -79,10 +79,10 @@ function mixW(lists) {
 }
 
 const PAL = {
-  lesser: { base: C(0x3d2a1b), fringe: C(0x8f6c45) },
-  median: { base: C(0x3a281a), fringe: C(0x7d5d3b) },
-  greater: { base: C(0x35251a), fringe: C(0x6a4e33) },
-  scap: { base: C(0x392719), fringe: C(0x705237) },
+  lesser: { base: C(0x2f2118), fringe: C(0x7a5c3d) },
+  median: { base: C(0x2d2017), fringe: C(0x6c5036) },
+  greater: { base: C(0x2a1e16), fringe: C(0x5c4430) },
+  scap: { base: C(0x2c1f16), fringe: C(0x604631) },
   alula: { base: C(0x2e2118), fringe: C(0x4a3727) },
   under: { base: C(0x2c2019), fringe: C(0x3d2d22) },
 };

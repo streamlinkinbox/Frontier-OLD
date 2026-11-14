@@ -30,9 +30,9 @@ function rng(seed) { let s = seed >>> 0; return () => ((s = (s * 1664525 + 10139
 
 const col = (hex) => new THREE.Color(hex);
 export const PLUMAGE = {
-  brown: col(0x3f2a1c),       // dark chocolate body plumage
-  brownWarm: col(0x4d3321),
-  brownFringe: col(0x7a5a3a), // worn paler feather margins
+  brown: col(0x2f2016),       // dark chocolate body plumage
+  brownWarm: col(0x382518),
+  brownFringe: col(0x6b5038), // worn paler feather margins
   white: col(0xf1efe9),
   whiteShade: col(0xd9d5cc),
 };
@@ -127,7 +127,7 @@ export class PlumageField {
     // shoulders at the nape, dropping forward onto the upper breast, with a pointed bib at the centre
     // + low-frequency raggedness (irregular feather tracts, not a row of evenly spaced teeth)
     const rag = 0.006 * Math.sin(p.x * 83 + 1.3) + 0.004 * Math.sin(p.x * 151 + p.z * 40 + 0.4) + 0.003 * Math.sin(p.z * 120 + 2.1);
-    const yb = 0.434 - (p.z - 0.018) * 0.24 - 0.018 * Math.exp(-((p.x / 0.032) ** 2)) * ss(0.07, 0.15, p.z) + rag;
+    const yb = 0.446 - (p.z - 0.018) * 0.24 - 0.018 * Math.exp(-((p.x / 0.032) ** 2)) * ss(0.07, 0.15, p.z) + rag;
     const hood = Math.max(g.head, ss(yb - 0.006, yb + 0.006, p.y));
     const white = clamp01(Math.max(hood, vent, rump));
     if (vent > 0.5 && type === FTYPE.contour) type = FTYPE.fluff;
