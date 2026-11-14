@@ -45,6 +45,14 @@ function patchFeather(mat, { fluff = false, backTint = [1.1, 1.08, 1.05], sheen 
         if (!gl_FrontFacing) diffuseColor.rgb *= mix(vec3(${backTint.map((v) => v.toFixed(3)).join(',')}), vec3(0.45), uFold);`)
       .replace('#include <lights_fragment_end>', `#include <lights_fragment_end>
         {
+          // the procedural sky probe is strongly blue; feathers scatter it diffusely and mostly see the
+          // warm ground and neighbouring plumage, so the sky term is partly desaturated (as the body coat)
+          float lumI = dot(reflectedLight.indirectDiffuse, vec3(0.2126, 0.7152, 0.0722));
+          reflectedLight.indirectDiffuse = mix(reflectedLight.indirectDiffuse, vec3(lumI), 0.55);
+          float lumS = dot(reflectedLight.indirectSpecular, vec3(0.2126, 0.7152, 0.0722));
+          reflectedLight.indirectSpecular = mix(reflectedLight.indirectSpecular, vec3(lumS), 0.4);
+        }
+        {
           // thin keratin barbules: soft sheen at grazing view angles
           float fres = pow(1.0 - saturate(abs(dot(normal, normalize(vViewPosition)))), 4.0);
           reflectedLight.indirectSpecular += fres * ${sheen.toFixed(3)} * diffuseColor.rgb * 0.8 + fres * ${(sheen * 0.08).toFixed(4)};

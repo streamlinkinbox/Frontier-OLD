@@ -10,7 +10,12 @@ export function buildEnvelope(rig, { h = 0.003 } = {}) {
   // body at 3 mm, head at 1 mm (eye socket, brow shelf, lores need the detail); the two meshes are
   // split by a plane just behind the skull (the crack lies on the same surface, under the hackles)
   const hl = new THREE.Vector3();
-  const inHead = (x, y, z) => S.toHead(hl.set(x, y, z), hl).z > -0.022;
+  // bounded to the head mesh's box: an unbounded plane would also claim the breast / fore-neck
+  // (the head is pitched down) and leave them out of both meshes
+  const inHead = (x, y, z) => {
+    S.toHead(hl.set(x, y, z), hl);
+    return hl.z > -0.022 && hl.z < 0.098 && Math.abs(hl.x) < 0.063 && hl.y > -0.068 && hl.y < 0.078;
+  };
   const parts = [];
   {
     const m = meshSDF(f, new THREE.Vector3(-0.14, 0.06, -0.28), new THREE.Vector3(0.14, 0.66, 0.26), h);
