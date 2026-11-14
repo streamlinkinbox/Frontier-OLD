@@ -23,8 +23,8 @@ function polyline(pts) {
   return (u) => { const p = cr.getPointAt(clamp01(u)); return [p.z, p.y]; };
 }
 
-const CULMEN = polyline([[0.079, 0.0318], [0.090, 0.0336], [0.100, 0.0339], [0.110, 0.0323], [0.119, 0.0286], [0.1268, 0.0222], [0.1322, 0.0128], [0.1348, 0.0022], [0.1343, -0.0088], [0.1313, -0.0193], [0.1266, -0.0278], [0.1218, -0.0336]]);
-const TOMIUM = polyline([[0.050, -0.0032], [0.066, -0.0058], [0.080, -0.0092], [0.093, -0.0121], [0.103, -0.0134], [0.1105, -0.0137], [0.1165, -0.0168], [0.1203, -0.0222], [0.1222, -0.0282], [0.1218, -0.0336]]);
+const CULMEN = polyline([[0.079, 0.0318], [0.090, 0.0336], [0.100, 0.0339], [0.110, 0.0323], [0.119, 0.0286], [0.1268, 0.0222], [0.1318, 0.0128], [0.1340, 0.0022], [0.1333, -0.0080], [0.1303, -0.0170], [0.1259, -0.0238], [0.1215, -0.0286]]);
+const TOMIUM = polyline([[0.050, -0.0032], [0.066, -0.0058], [0.080, -0.0092], [0.093, -0.0121], [0.103, -0.0134], [0.1105, -0.0137], [0.1163, -0.0162], [0.1198, -0.0205], [0.1215, -0.0250], [0.1215, -0.0286]]);
 // half-width of the upper mandible along its length (widest at the gape, compressed toward the hook)
 const WIDTH = (u) => lerp(0.0128, 0.0012, Math.pow(u, 1.15)) * (1 + 0.12 * ss(0.0, 0.08, 0.08 - u));
 // lower mandible: top = lower tomium (just inside the upper), bottom = gonys
@@ -65,9 +65,9 @@ class Part {
   }
 }
 
-const BILL = new THREE.Color(0xf5c63c);
-const BILL_TIP = new THREE.Color(0xf2d79a);
-const CERE = new THREE.Color(0xf6cc4a);
+const BILL = new THREE.Color(0xeab42e);     // deep chrome yellow (slightly orange toward the base)
+const BILL_TIP = new THREE.Color(0xf1dca6); // worn, paler ivory-yellow hook
+const CERE = new THREE.Color(0xf0c444);
 const MOUTH = new THREE.Color(0x9a7f86);
 const MOUTH_DARK = new THREE.Color(0x4b3a3d);
 
@@ -81,7 +81,7 @@ export function buildBill(rig) {
   const col = (u, inner) => {
     if (inner) return MOUTH.clone().lerp(MOUTH_DARK, 0.3 * (1 - u));
     const c = CERE.clone().lerp(BILL, ss(0.1, 0.24, u));
-    return c.lerp(BILL_TIP, ss(0.72, 1.0, u) * 0.7);
+    return c.lerp(BILL_TIP, ss(0.55, 1.0, u) * 0.85);
   };
   // ---- upper mandible: outer shell + palate, joined along the tomium
   const sec = (u, s, inner) => {
@@ -159,8 +159,9 @@ export function buildEyes(rig, eyeR = 0.0105) {
   rig.root.updateMatrixWorld(true);
   const ball = new Part(), lids = new Part(), nict = new Part();
   const W = new THREE.Color(0xffffff);
-  const LID = new THREE.Color(0xd9d4ca);
-  const RIM = new THREE.Color(0x2f2a26);
+  // adult female: narrow bare yellow orbital ring, lid margin only slightly darker (no black eyeliner)
+  const LID = new THREE.Color(0xd9bd62);
+  const RIM = new THREE.Color(0x9c8240);
   const open = 0.72; // polar half-angle of the lid opening (rad)
   for (const E of rig.eyes) {
     const flip = E.eye.matrixWorld.determinant() < 0;

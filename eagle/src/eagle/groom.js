@@ -212,8 +212,16 @@ export function groomEnvelope(rig, env, { density = 1, seed = 7 } = {}) {
   const rowP = [], rowN = [], rowD = [];
   for (let i = 0; i <= NR; i++) { rowP.push(new THREE.Vector3()); rowN.push(new THREE.Vector3()); rowD.push(new THREE.Vector3()); }
   const brown = PLUMAGE.brown, white = PLUMAGE.white;
+  // eyes (head-local): no feather may lie over the cornea / lid ring
+  const E = S.eye, hInv = S.headInv, _hl = new THREE.Vector3();
+  const eyeHit = (p) => {
+    _hl.copy(p).applyMatrix4(hInv);
+    const qx = Math.abs(_hl.x) - E.x, qy = _hl.y - E.y, qz = _hl.z - E.z, ql = Math.hypot(qx, qy, qz);
+    return ql < E.r + 0.0045 && (qx * 0.836 + qz * 0.549) / ql > 0.45;
+  };
   for (const e of accepted) {
     const pr = e.props;
+    if (pr.type === FTYPE.head && eyeHit(e.p)) continue;
     const rnd = R();
     const L = pr.L * (0.85 + 0.3 * R());
     const width = L * pr.aspect * (0.9 + 0.2 * R());
@@ -224,8 +232,13 @@ export function groomEnvelope(rig, env, { density = 1, seed = 7 } = {}) {
     d.applyAxisAngle(e.n, sc);
     // march along the surface
     rowP[0].copy(e.p); rowN[0].copy(e.n); rowD[0].copy(d);
+    let Lc = L;
+    if (pr.type === FTYPE.head) {
+      for (let k = 1; k <= 6; k++) { tmp.copy(e.p).addScaledVector(d, L * k / 6); if (eyeHit(tmp)) { Lc = L * (k - 1) / 6; break; } }
+      if (Lc < L * 0.34) continue;
+    }
     for (let j = 1; j <= NR; j++) {
-      q.copy(rowP[j - 1]).addScaledVector(rowD[j - 1], L / NR);
+      q.copy(rowP[j - 1]).addScaledVector(rowD[j - 1], Lc / NR);
       project(S, q, n);
       rowP[j].copy(q); rowN[j].copy(n);
       tmp.subVectors(rowP[j], rowP[j - 1]);
@@ -250,7 +263,7 @@ export function groomEnvelope(rig, env, { density = 1, seed = 7 } = {}) {
       const s = grid.sample(e.p.x + e.n.x * dd, e.p.y + e.n.y * dd, e.p.z + e.n.z * dd);
       occ += Math.max(0, dd - s) / dd / k;
     }
-    const ao = 1 - Math.min(0.8, occ * 0.9);
+    const ao = 1 - Math.min(0.5, occ * 0.7);
     const mask = clamp01(pr.g.head + pr.g.neck);
     const flip = R() < 0.5; // mirror half of the feathers (texture variety)
     for (let j = 0; j <= NR; j++) {

@@ -111,10 +111,10 @@ export class Sculpt {
       [-10.0, 0.6, -4.2, 2.2, -1.6],
       [-8.5, 1.9, -5.2, 2.9, -1.4],
       [-7.0, 2.8, -5.6, 3.2, -1.2],
-      [-5.0, 3.75, -5.1, 3.35, -1.0],
-      [-3.0, 4.05, -4.6, 3.4, -0.8],
-      [-1.0, 3.8, -4.05, 3.3, -0.6],
-      [0.6, 3.15, -3.6, 2.95, -0.6],
+      [-5.0, 3.4, -5.1, 3.5, -1.0],
+      [-3.0, 3.65, -4.6, 3.55, -0.8],
+      [-1.0, 3.45, -4.05, 3.45, -0.6],
+      [0.6, 2.95, -3.6, 3.05, -0.6],
       [1.8, 2.2, -3.3, 2.2, -0.7],
       [2.8, 1.25, -3.1, 1.55, -0.8],
       [3.6, 0.6, -2.9, 1.1, -0.9],
@@ -129,7 +129,7 @@ export class Sculpt {
       const dy = y - yc;
       const ry = dy > 0 ? top - yc : yc - bot;
       // egg section: the crown is narrower than the jowls
-      const rx = hw * (dy > 0 ? 1 - 0.18 * Math.min(1, dy / ry) ** 2 : 1);
+      const rx = hw * (dy > 0 ? 1 - 0.1 * Math.min(1, dy / ry) ** 2 : 1);
       const k0 = Math.hypot(x / rx, dy / ry), k1 = Math.hypot(x / (rx * rx), dy / (ry * ry));
       const d2 = k1 > 1e-9 ? k0 * (k0 - 1) / k1 : -Math.min(rx, ry);
       const dz = z - zc;
@@ -137,8 +137,10 @@ export class Sculpt {
     });
     // supraorbital shelf: a flattened lobe over each eye, tilted down toward the bill (the "glare")
     P('brow', hb, H, 0.008, (x, y, z) => {
-      const [ry, rz] = rot(y - (EY + 1.12 / 110), z - (EZ + 0.25 / 110), 0.24);
-      return sdEllipsoid(Math.abs(x) - 2.55 / 110, ry, rz, 1.0 / 110, 0.42 / 110, 2.3 / 110);
+      // broad flat shelf: overhangs the top of the eye laterally, runs forward to the cere and back
+      // over the temple, flat on top (continuous with the crown)
+      const [ry, rz] = rot(y - (EY + 1.02 / 110), z - (EZ + 0.35 / 110), 0.2);
+      return sdEllipsoid(Math.abs(x) - 2.45 / 110, ry, rz, 1.3 / 110, 0.5 / 110, 2.7 / 110);
     });
 
     // ---------------- tibiae ("trousers"): long feathered tubes, knee hidden in the belly
@@ -172,12 +174,16 @@ export class Sculpt {
       else body = smin(body, di, p.k);
     }
     // brow shelf merges with the head with a tight blend (keeps the ridge crisp)
-    head = smin(head, brow, 0.009);
+    head = smin(head, brow, 0.013);
     // eye sockets: the plumage wraps round the exposed eye
     v.set(x, y, z).applyMatrix4(this.headInv);
     const E = this.eye;
-    const de = (Math.hypot(Math.abs(v.x) - E.x, v.y - E.y, v.z - E.z) - (E.r + 0.0012)) * this.headScale;
-    head = smax(head, -de, 0.004);
+    // only a shallow dish round the corneal cap (≈ 0.85 rad about the gaze axis): the lid ring is a narrow
+    // band flush with the plumage, the rest of the eyeball stays inside the head
+    const qx = Math.abs(v.x) - E.x, qy = v.y - E.y, qz = v.z - E.z, ql = Math.hypot(qx, qy, qz) || 1e-6;
+    const cosT = (qx * 0.836 + qz * 0.549) / ql;
+    const de = (ql - (E.r + 0.0010) + Math.max(0, 0.66 - cosT) * 0.06) * this.headScale;
+    head = smax(head, -de, 0.0025);
     // head ↔ neck: generous blend (the white hood is one continuous mass)
     return smin(body, head, 0.03);
   }

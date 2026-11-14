@@ -40,7 +40,7 @@ export function createPlumageMaterial(atlas, { undercoat = false } = {}) {
       .replace('#include <begin_vertex>', `#include <begin_vertex>
         ${undercoat ? 'vOcc = aAO;' : `
         vTip = aTip; vT = aT;
-        vOcc = aAO * mix(0.45, 1.0, smoothstep(0.0, 0.75, aT));
+        vOcc = aAO * mix(0.6, 1.0, smoothstep(0.0, 0.75, aT));
         // raised hackles / fluffed body plumage: the feather pivots up about its root
         float raise = uFluff * aMask + uFluffBody * (1.0 - aMask) * 0.7 + 0.1 * uBreath * (1.0 - aMask);
         float fl = sin(uTime * (17.0 + aRand * 13.0) + aRand * 40.0 + position.x * 60.0 + position.z * 45.0);

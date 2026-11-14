@@ -76,12 +76,12 @@ export function createMaterials() {
   M.skull = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 });
 
   // Bill: glossy keratin with fine longitudinal grain; cere slightly waxy (roughness from vertex attribute)
-  M.beak = new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.34, metalness: 0, clearcoat: 0.3, clearcoatRoughness: 0.3, bumpMap: noise, bumpScale: 0.25, sheen: 0 });
+  M.beak = new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.42, metalness: 0, clearcoat: 0.12, clearcoatRoughness: 0.4, bumpMap: noise, bumpScale: 0.35, sheen: 0 });
   M.beak.onBeforeCompile = (sh) => {
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float aRough; varying float vRough;')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRough = aRough;');
     sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vRough;')
-      .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = vRough;');
+      .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = vRough + 0.1;');
   };
   M.beak.customProgramCacheKey = () => 'beak';
   M.mouth = new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.38, clearcoat: 0.6, clearcoatRoughness: 0.2, side: THREE.DoubleSide });
@@ -113,7 +113,7 @@ function irisTexture() {
   for (let i = 0; i < W; i++) fib[i] = rnd();
   const sm = new Float32Array(W);
   for (let i = 0; i < W; i++) { let s = 0; for (let k = -3; k <= 3; k++) s += fib[(i + k + W) % W]; sm[i] = s / 7; }
-  const iris = [1.0, 0.96, 0.66], irisDeep = [0.93, 0.84, 0.48];
+  const iris = [1.0, 0.97, 0.8], irisDeep = [0.96, 0.89, 0.62]; // pale cream-yellow adult iris
   for (let y = 0; y < H; y++) {
     const v = 1 - y / (H - 1); // canvas top = v 1
     const th = (1 - v) * 180;  // degrees from the gaze pole
