@@ -145,8 +145,15 @@ export function buildWingCoat(rig) {
             const kt = kf + lean * tt * L / spanStep, vt = v + tt * L / S0.chord;
             const S = t === 0 ? S0 : evalS(kt, vt, top);
             // fold morph: same chordwise collapse as the skin under it
-            const Sc = evalS(kt, vt + S.col * COLLAPSE * (1 - clamp01(vt)), top);
-            card.push({ c: S.P, n: S.N, w: S0.w, t: tt, m: Sc.P.clone().sub(S.P) });
+            let mo;
+            if (top) mo = evalS(kt, vt + S.col * COLLAPSE * (1 - clamp01(vt)), top).P.clone().sub(S.P);
+            else {
+              // under-wing coverts are hidden against the flank in the closed wing: each card shrinks
+              // into its (collapsed) root and sinks under the skin instead of riding the folded edge
+              const R0 = evalS(kf, v + S.col * 0.92 * (1 - clamp01(v)), top);
+              mo = R0.P.clone().sub(S.P).addScaledVector(R0.N, -0.006 * S.col);
+            }
+            card.push({ c: S.P, n: S.N, w: S0.w, t: tt, m: mo });
           }
           for (let t = 0; t <= NR; t++) {
             const e = card[t];
@@ -182,16 +189,20 @@ export function buildWingCoat(rig) {
       const width = f.width * (0.95 + 0.1 * R());
       const NR = f.len > 0.1 ? 7 : 5;
       const lift = f.kind === 'scap' ? 0.1 : f.kind === 'alula' ? 0.06 : 0.07;
+      const k = ventral ? 0.95 : f.kind === 'msc' ? 0.38 : f.kind === 'gsc' ? 0.2 : f.kind === 'alula' ? 0.3 : f.kind === 'scap' ? 0.45 : 0;
       const card = [];
       for (let t = 0; t <= NR; t++) {
         const tt = t / NR;
         const c = new THREE.Vector3().setFromMatrixPosition(tmpM).addScaledVector(dW, tt * L);
         // the feather bows away from the skin then lies down toward its tip
         const h = L * (lift * tt - 0.45 * lift * tt * tt);
-        card.push({ c, n: nW, d: dW, x: xW.clone().multiplyScalar(width * 0.5), w, h, slope: lift * (1 - 0.9 * tt) });
+        // fold morph (same driver as the skin collapse): in the closed wing the coverts slide over one
+        // another and are pressed flat — pull each feather back toward its root and onto the skin
+        const m = dW.clone().multiplyScalar(-tt * L * k).addScaledVector(nW, (f.kind === 'scap' ? -0.035 : -0.004) * tt);
+        card.push({ c, n: nW, d: dW, x: xW.clone().multiplyScalar(width * 0.5), w, h, slope: lift * (1 - 0.9 * tt), m });
       }
       let pal = PAL.greater, fr = 0.6, type = FTYPE.covert;
-      if (f.kind === 'msc') { pal = PAL.median; fr = 0.8; }
+      if (f.kind === 'msc') { pal = PAL.median; fr = 0.5; }
       else if (f.kind === 'scap') { pal = PAL.scap; fr = 0.7; type = FTYPE.contour; }
       else if (f.kind === 'alula') { pal = PAL.alula; fr = 0.4; }
       else if (ventral) { pal = PAL.under; fr = 0.35; }
