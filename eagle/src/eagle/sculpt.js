@@ -59,8 +59,8 @@ export class Sculpt {
     // ---------------- trunk (trunk-local: +z forward along the spine, +y dorsal, +x left)
     const T = this.trunkInv, tb = I(rig.trunk), tl = I(rig.tail);
     P('body', tb, T, 0.0, (x, y, z) => sdEllipsoid(x, y + 0.008, z + 0.02, 0.074, 0.088, 0.168));        // torso
-    P('body', tb, T, 0.05, (x, y, z) => sdEllipsoid(x, y + 0.036, z - 0.056, 0.078, 0.098, 0.092));      // breast
-    P('body', tb, T, 0.05, (x, y, z) => sdEllipsoid(x, y + 0.058, z + 0.088, 0.068, 0.068, 0.104));      // belly
+    P('body', tb, T, 0.05, (x, y, z) => sdEllipsoid(x, y + 0.036, z - 0.056, 0.09, 0.1, 0.094));      // breast (broad, as seen front-on)
+    P('body', tb, T, 0.05, (x, y, z) => sdEllipsoid(x, y + 0.058, z + 0.088, 0.08, 0.07, 0.104));      // belly
     P('body', tb, T, 0.05, (x, y, z) => sdEllipsoid(Math.abs(x) - 0.03, y + 0.02, z + 0.05, 0.05, 0.06, 0.12));      // flanks (side feathers close up under the folded wing)
     P('body', tb, T, 0.04, (x, y, z) => sdEllipsoid(Math.abs(x) - 0.038, y - 0.034, z - 0.058, 0.045, 0.036, 0.074)); // mantle / shoulders
     P('body', tb, T, 0.05, (x, y, z) => sdEllipsoid(x, y - 0.026, z - 0.112, 0.056, 0.05, 0.05));       // neck base / crop
