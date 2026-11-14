@@ -336,12 +336,13 @@ export class Animator {
     // balance: while walking the folded wings are held loosely away from the flanks (wrists dropped)
     // and the wing on the rising side is lifted as the body rolls — lagging the roll (inertia)
     const cLw = Math.cos(gp - midL - 0.9);
-    const shuffleL = W * (0.13 * Math.max(0, -cLw) + 0.06);
-    const shuffleR = W * (0.13 * Math.max(0, cLw) + 0.06);
+    // wings stay folded while walking; only a slight lift of the wing on the rising side for balance
+    const shuffleL = W * (0.035 * Math.max(0, -cLw) + 0.01);
+    const shuffleR = W * (0.035 * Math.max(0, cLw) + 0.01);
     for (const [w, sh] of [[wl, shuffleL], [wr, shuffleR]]) {
       w.elev += sh + 0.1 * retuck + 0.08 * rouseFluff;
-      w.droop += 0.12 * W;
-      w.elbow -= 0.1 * W + 0.25 * sh;
+      w.droop += 0.02 * W;
+      w.elbow -= 0.02 * W + 0.2 * sh;
       w.sweep += 0.35 * sh + 0.12 * retuck;
       w.elbow -= 0.12 * retuck + 0.12 * rouseFluff;
       w.wrist -= 0.1 * retuck + 0.1 * rouseFluff;
@@ -408,7 +409,7 @@ export class Animator {
     }
     P.jaw = jaw;
     // hackles and throat: head & neck feathers raised, body pulses with each note
-    P.fluff = 0.55 * ss(0.2, 0.8, t) * (1 - ss(3.4, 4.2, t));
+    P.fluff = 0.25 * ss(0.2, 0.8, t) * (1 - ss(3.4, 4.2, t));
     P.breath += 0.8 * note;
     P.pitch += 0.02 * back + 0.012 * note - 0.03 * wind;
     P.trunkOff.y -= 0.008 * wind - 0.004 * back;

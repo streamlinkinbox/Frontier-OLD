@@ -87,7 +87,7 @@ export class Sculpt {
     }
     pts.push(rig.head.getWorldPosition(new THREE.Vector3()));
     up.push(new THREE.Vector3(0, 1, 0).transformDirection(rig.head.matrixWorld));
-    const rad = (u) => lerp(0.062, 0.041, Math.pow(u, 0.7));
+    const rad = (u) => lerp(0.052, 0.03, Math.pow(u, 0.8)); // feathered neck narrower than the skull behind the head
     const off = (u) => lerp(0.02, 0.006, u);
     this.neckPts = [];
     for (let i = 0; i < nv; i++) {
@@ -185,7 +185,7 @@ export class Sculpt {
     const de = (ql - (E.r + 0.0010) + Math.max(0, 0.66 - cosT) * 0.06) * this.headScale;
     head = smax(head, -de, 0.0025);
     // head ↔ neck: generous blend (the white hood is one continuous mass)
-    return smin(body, head, 0.03);
+    return smin(body, head, 0.018);
   }
 
   gradient(x, y, z, out, h = 0.0006) {
