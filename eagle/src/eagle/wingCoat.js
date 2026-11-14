@@ -190,10 +190,18 @@ export function buildWingCoat(rig) {
       const NR = f.len > 0.1 ? 7 : 5;
       const lift = f.kind === 'scap' ? 0.1 : f.kind === 'alula' ? 0.06 : 0.07;
       const k = ventral ? 0.95 : f.kind === 'msc' ? 0.38 : f.kind === 'gsc' ? 0.2 : f.kind === 'alula' ? 0.3 : f.kind === 'scap' ? 0.45 : 0;
+      // hand / digit / alula coverts are rooted on bones that form the leading edge: a card centred on
+      // its shaft would put half its width in front of the wing, so it is shifted toward the trailing side
+      let shift = new THREE.Vector3();
+      if (f.kind === 'gpc' || f.kind === 'alula') {
+        const lead = new THREE.Vector3(0, 0, 1).transformDirection(f.base.parent.matrixWorld);
+        const xs = xW.dot(lead);
+        shift = xW.clone().multiplyScalar(-Math.sign(xs || 1) * width * 0.48 * Math.min(1, Math.abs(xs) * 1.6));
+      }
       const card = [];
       for (let t = 0; t <= NR; t++) {
         const tt = t / NR;
-        const c = new THREE.Vector3().setFromMatrixPosition(tmpM).addScaledVector(dW, tt * L);
+        const c = new THREE.Vector3().setFromMatrixPosition(tmpM).add(shift).addScaledVector(dW, tt * L);
         // the feather bows away from the skin then lies down toward its tip
         const h = L * (lift * tt - 0.45 * lift * tt * tt);
         // fold morph (same driver as the skin collapse): in the closed wing the coverts slide over one
