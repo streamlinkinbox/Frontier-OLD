@@ -111,7 +111,7 @@ export class PlumageField {
     const headL = hl.z > 0.074 ? 0.0065 : lerp(0.009, 0.019, ss(0.07, -0.01, hl.z)) * (1 + 0.25 * ss(0.0, -0.02, hl.y));
     const neckL = lerp(0.03, 0.044, ss(0.0, this.neckLen, nc.s));
     const bodyL = lerp(0.052, 0.07, ss(0.0, -0.12, tl.z)) * (1 + 0.15 * ventral);
-    const legL = 0.08;
+    const legL = 0.095;
     L = headL * g.head + neckL * g.neck + bodyL * g.body + legL * g.leg;
     const dom = Object.entries(g).sort((a, b) => b[1] - a[1])[0][0];
     if (dom === 'head') { type = FTYPE.head; aspect = 0.42; }

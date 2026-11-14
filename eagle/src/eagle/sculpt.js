@@ -148,9 +148,9 @@ export class Sculpt {
     for (const S of rig.sides) {
       const knee = S.tib.getWorldPosition(new THREE.Vector3());
       const ankle = S.tmt.getWorldPosition(new THREE.Vector3());
-      const a = knee.clone().lerp(ankle, 0.05), b = knee.clone().lerp(ankle, 0.82);
+      const a = knee.clone().lerp(ankle, 0.05), b = knee.clone().lerp(ankle, 0.86);
       this.legs.push({ knee, ankle });
-      P('leg', I(S.tib), null, 0.035, (x, y, z) => sdRoundCone(x, y, z, a, b, 0.036, 0.024));
+      P('leg', I(S.tib), null, 0.035, (x, y, z) => sdRoundCone(x, y, z, a, b, 0.044, 0.032));
     }
     this._v = new THREE.Vector3();
     this._d = new Float32Array(prims.length);

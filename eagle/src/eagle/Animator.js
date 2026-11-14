@@ -322,7 +322,7 @@ export class Animator {
 
     // ---- trunk
     P.pos.copy(g.pos); P.yaw = g.yaw;
-    const basePitch = lerp(0.64, 0.48, W);             // upright perch → body inclined ~30° while walking
+    const basePitch = lerp(0.64, 0.58, W);             // upright perch → body inclined ~40° while walking (eagles stay fairly upright)
     const baseY = lerp(0.296, 0.28, W); // perched: knees well flexed so the trousers hang to the tarsus
     const meanOff = new THREE.Vector3(0, baseY + 0.0012 * breath, 0.0);
     P.trunkOff.set(walkShift + 0.012 * shift + shake * 0.004 * Math.sin(t * TAU * 5.5), baseY + walkBob + 0.0012 * breath - 0.004 * rouseFluff, walkSurge);
@@ -373,7 +373,7 @@ export class Animator {
     P.legL = legs[0]; P.legR = legs[1];
 
     // ---- head / neck / bill: gaze + actions
-    let atlas = new THREE.Vector3(0, lerp(0.098, 0.118, W), lerp(0.242, 0.258, W)); // walking: neck raised and extended forward
+    let atlas = new THREE.Vector3(0, lerp(0.098, 0.128, W), lerp(0.242, 0.236, W)); // walking: neck raised, head carried high above the shoulders
     let gazeOverride = null, extra = {};
     P.jaw = 0; P.lidUp = 0; P.lidLo = 0; P.fluff = 0.06 * shift * 0 + rouseFluff * 0.8; P.fluffBody = rouseFluff; P.breath = breath * (1 - W * 0.5);
     P.flutter = 0;
@@ -387,7 +387,7 @@ export class Animator {
     }
     const G = this.updateGaze(dt, { yaw: lerp(1.1, 0.5, W), pitchLo: lerp(-0.45, -0.5, W), pitchHi: lerp(0.35, -0.05, W), every: [0.5, 3.2] }, gazeOverride);
     // walking: the head is carried a little low, looking at the ground ahead
-    const gaze = { yaw: G.yaw + g.speed / WALK.radius * 0.3, pitch: G.pitch - 0.15 * W, roll: G.roll };
+    const gaze = { yaw: G.yaw + g.speed / WALK.radius * 0.3, pitch: G.pitch - 0.05 * W, roll: G.roll };
     this.setHead(P, atlas, gaze, stab, mean, extra);
   }
 
@@ -487,10 +487,12 @@ export class Animator {
     P.pos.set(a.pos.x, a.pos.y + altWobble, a.pos.z); P.yaw = a.yaw;
     const basePitch = lerp(0.035, 0.085, Wf);
     P.pitch = basePitch + pitchOsc + 0.01 * Math.sin(t * 0.9);
-    P.roll = a.bank + a.gustRoll * (1 - 0.5 * Wf);
+    // eagles flap mainly in straight flight and circle on set wings: the flapping bird holds a shallow bank
+    const bankVis = a.bank * lerp(1, 0.35, Wf);
+    P.roll = bankVis + a.gustRoll * (1 - 0.5 * Wf);
     P.bodyYaw = 0;
     P.trunkOff.set(0, bob, surge);
-    const mean = { off: new THREE.Vector3(0, 0, 0), pitch: basePitch, roll: a.bank + a.gustRoll * (1 - 0.5 * Wf), bodyYaw: 0 };
+    const mean = { off: new THREE.Vector3(0, 0, 0), pitch: basePitch, roll: bankVis + a.gustRoll * (1 - 0.5 * Wf), bodyYaw: 0 };
 
     // --- wings
     const flapWing = (side) => {
