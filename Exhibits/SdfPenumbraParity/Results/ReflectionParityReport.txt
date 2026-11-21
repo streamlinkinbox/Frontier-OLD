@@ -1,0 +1,63 @@
+reflection transport parity capture - mirror and GGX VNDF lobes of arena/ad7fa01c-frontier (e4966e4)
+replica of RadianceIntegration.wgsl: SampleVisibleNormal (787), EvaluateGgxLobe (822),
+PushReflectionLobe (1158, Masking 1185, Pdf 1186) and the WavefrontIntegration.wgsl MIS guard (1435)
+
+visible-normal sampler identification against the Heitz VNDF kernel D(m) G1(cosThetaOut) t / cosThetaOut:
+  cosThetaOut=0.94 alpha=0.08 analytic ring norm=1.00000 (1 = Smith projected area) KS distance=0.0023 E[t] sampled=0.92844 analytic=0.92844
+  cosThetaOut=0.57 alpha=0.08 analytic ring norm=1.00000 (1 = Smith projected area) KS distance=0.0010 E[t] sampled=0.57919 analytic=0.57919
+  cosThetaOut=0.17 alpha=0.08 analytic ring norm=1.00001 (1 = Smith projected area) KS distance=0.0008 E[t] sampled=0.23553 analytic=0.23553
+  cosThetaOut=0.57 alpha=0.35 analytic ring norm=1.00000 (1 = Smith projected area) KS distance=0.0003 E[t] sampled=0.63984 analytic=0.63984
+  cosThetaOut=0.17 alpha=0.35 analytic ring norm=1.00000 (1 = Smith projected area) KS distance=0.0003 E[t] sampled=0.49598 analytic=0.49598
+
+white furnace: mean continuation weight with Fresnel pinned to one against the exact hemispherical
+integral of f cos(theta_i), the directional albedo of the lobe (0.0000 = the estimator is unbiased):
+  cosThetaOut=0.94 alpha=0.08 shipped F-G2/G1 deviation=0.00001 | extra-jacobian variant deviation=0.00920
+  cosThetaOut=0.57 alpha=0.08 shipped F-G2/G1 deviation=0.00004 | extra-jacobian variant deviation=0.02067
+  cosThetaOut=0.17 alpha=0.08 shipped F-G2/G1 deviation=0.00004 | extra-jacobian variant deviation=0.44036
+  cosThetaOut=0.57 alpha=0.35 shipped F-G2/G1 deviation=0.00002 | extra-jacobian variant deviation=0.19339
+  cosThetaOut=0.17 alpha=0.35 shipped F-G2/G1 deviation=0.00001 | extra-jacobian variant deviation=2.02941
+  the extra-jacobian variant multiplies the weight by |wo.m|/cosThetaOut, which double counts the
+  reflection jacobian because the masked VNDF already carries it: it is reported as an audit only
+
+scene white furnace, uniform enclosure radiance 1.000 and object Fresnel pinned to rho = 0.80:
+  the exact answer is 1.000 on the enclosure, rho A(cosThetaOut) on the glossy lobe and rho on the mirror
+  glossy alpha=0.08 lobe sampling only  mean relative error all=0.0001 object=0.0012 worst=0.0086 over 32400 px
+  glossy alpha=0.08 next-event plus MIS mean relative error all=0.0002 object=0.0027 worst=0.0128 over 32400 px
+  mirror delta lobe sampling only       mean relative error all=0.0000 object=0.0000 worst=0.0000 over 32400 px
+  mirror delta next-event plus MIS      mean relative error all=0.0000 object=0.0000 worst=0.0000 over 32400 px
+  lobe sampling and next-event MIS agree to 0.0014 relative on the glossy object, which is what ties the recorded
+  ray pdf to the sampler: a wrong pdf would move the balance between the two estimators
+
+non-finite panel values replaced by zero: 2 of 388800
+
+specular probe scene, replica transport against the converged reference (linear luminance):
+  panel 0: mean luminance 0.2061 median 0.1271 p99 1.8517 fireflies(>6) 59
+  panel 1: mean luminance 0.2061 median 0.1275 p99 1.8474 fireflies(>6) 59
+  tonemapped RMSE 0.0140, mean linear deviation 0.0076, median tonemapped deviation 0.0063
+
+audits that are not gated:
+  recorded ray pdf D G1(cosThetaOut)/(4 cosThetaOut) equals the analytic density of the draw: yes
+  an extra |wo.m|/cosThetaOut factor on the weight would double count the jacobian: confirmed, it deviates from the directional albedo
+  lobe sampling versus next-event MIS on the glossy furnace object: 0.0014 relative apart
+
+per-material convergence of the replica transport, 512 spp against 2048 spp (same key):
+  copper ggx a=0.08  replica 0.17945 reference 0.17942 ratio 1.0002 over 44767 px
+  delta mirror       replica 0.14419 reference 0.14411 ratio 1.0005 over 6847 px
+  matte back         replica 0.17285 reference 0.17299 ratio 0.9992 over 51282 px
+  matte crimson      replica 0.15283 reference 0.15277 ratio 1.0004 over 7905 px
+  matte green        replica 0.03197 reference 0.03196 ratio 1.0004 over 7905 px
+  matte stone        replica 1.04277 reference 1.04276 ratio 1.0000 over 6040 px
+  matte blue         replica 0.21897 reference 0.21888 ratio 1.0004 over 4853 px
+
+replica transport vs converged reference: tonemapped RMSE 0.0140, mean linear deviation 0.0076
+
+gates:
+[PASS] visible-normal draw is the Heitz VNDF: analytic ring norm within 0.5% of one, KS distance within 0.010, E[t] within 1%
+[PASS] shipped continuation weight F-G2/G1 reproduces the exact directional albedo of f cos within 1%
+[PASS] scene white furnace renders the closed form within 2% mean relative error, both estimators
+[PASS] replica specular panel within 0.030 tonemapped RMSE of the converged 2048-spp reference
+[PASS] replica specular panel within 0.015 mean linear deviation of the converged reference
+
+verdict: reflection transport verified
+the GGX VNDF lobe, the recorded ray pdf, the continuation weight, the delta mirror lobe and
+the multiple importance sampling bookkeeping all reproduce closed-form radiance transport

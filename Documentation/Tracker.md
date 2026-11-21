@@ -1752,3 +1752,14 @@ the 5ec53579 line already in the tree; the owner chose it over porting the demo'
 - **Result:** corrected widths 0.759 / 0.754 / 0.699 m against a 0.729 m reference (all within gate),
   tonemapped RMSE 0.0092 / 0.0093 vs direct-only PT and 0.0338 / 0.0336 vs full PT; all gates pass.
 - **Evidence:** `Exhibits/SdfPenumbraParity/` (capture source, repack tool, proof sheet, parity report).
+- **Reflection parity oracle (2026-11-21, branch `arena/fd42105b-frontier-old`):** second oracle in
+  `Exhibits/SdfPenumbraParity/` (`Code/ReflectionParityCapture.cpp`) replicating the GGX VNDF lobe, delta
+  mirror lobe, recorded ray pdf and power-heuristic MIS of
+  `Experimental/DeterministicPathTracer` (`arena/ad7fa01c-frontier` @ `e4966e4`) and tying them to closed-form
+  radiometry: Heitz VNDF identification (ring norm 1.00000, KS ≤ 0.0023), white-furnace continuation weight
+  (deviation ≤ 4e-5), uniform-enclosure energy balance (0.12 % lobe-only, 0.27 % with next-event MIS, mirror
+  exact), recorded-pdf consistency (two estimators 0.14 % apart) and image parity vs a converged reference
+  (RMSE 0.0140). **All gates pass — the reflection transport itself is sound**; the reflection complaint is
+  redirected to the roughness→α mapping, the reflection ray geometry source and the denoise/upsample path,
+  which this oracle does not exercise. Evidence: `Exhibits/SdfPenumbraParity/Images/ReflectionParitySheet.png`,
+  `Results/ReflectionParityReport.txt`.

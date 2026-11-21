@@ -67,10 +67,63 @@ mode 1/2 panels within 0.020/0.025 tonemapped RMSE of the direct-only reference;
 
 ## Limitations and follow-ups
 
-- Lambert-only BSDF: the showcase isolates transport parity (shadows, penumbrae, GI); specular lobes are
-  deliberately excluded so every mode shares one BSDF. A mirror/GGX reflection scene is the natural next
-  probe for the reflection complaints against `Experimental/DeterministicPathTracer`.
+- Lambert-only BSDF: this capture isolates shadow and penumbra transport parity; the specular lobes are
+  covered by the companion reflection oracle described below.
 - Voxel radiosity at 0.042/0.090 m cells leaves visible blotches on the back wall in modes 3–4; they sit
   inside the 0.035 RMSE gate but a finer fine-cascade would shrink them.
 - The replication covers the PROOF 11 sequence only; the native Vulkan port of the deterministic path
   tracer was not re-derived here, only its HTML/Slang source inspected.
+
+============================================================================================================
+## 🧩 Reflection parity oracle — `Code/ReflectionParityCapture.cpp`
+
+Second oracle in this exhibit, aimed at the reflection complaints against
+`Experimental/DeterministicPathTracer`. It replicates the GGX visible-normal-distribution (VNDF) lobe, the
+delta mirror lobe, the recorded ray pdf and the power-heuristic MIS bookkeeping of
+`RadianceIntegration.wgsl` / `WavefrontIntegration.wgsl` (branch `arena/ad7fa01c-frontier`, commit `e4966e4`)
+and ties them to closed-form radiance transport rather than to another renderer.
+
+### Run
+
+```sh
+g++ -std=c++17 -O2 -march=native -pthread -o /tmp/ReflectionParityCapture \
+    Exhibits/SdfPenumbraParity/Code/ReflectionParityCapture.cpp
+/tmp/ReflectionParityCapture Exhibits/SdfPenumbraParity      # sheet + report + gates (~95 s, 2 cores)
+REFL_GATES_ONLY=1 /tmp/ReflectionParityCapture <any dir>     # gates without the panel render
+python3 Exhibits/SdfPenumbraParity/Code/PngRepack.py \
+    Exhibits/SdfPenumbraParity/Images/ReflectionParitySheet.png
+```
+
+### What is verified, and against what
+
+| Gate | Reference | Result at this revision |
+|---|---|---|
+| The visible-normal draw is Heitz's VNDF | Analytic ring integral of `D(m)·G1(cosθo)·t/cosθo` over `t = ωo·m`, which must equal one by Smith's projected-area identity; KS distance of the sampled `t` cumulative; sampled vs analytic `E[t]` | ring norm 1.00000, KS ≤ 0.0023, `E[t]` equal to 5 decimals at 5 `(cosθo, α)` probes |
+| The continuation weight `F·G2/G1` is unbiased | Exact hemispherical integral of `f·cosθi` (the directional albedo) in microfacet space | deviation ≤ 4e-5 relative at every probe |
+| Whole-transport energy balance | Uniform emitting enclosure: enclosure radiance 1.000, glossy object `ρ·A(cosθo)`, mirror `ρ`, all closed form | mean relative error 0.12 % (lobe sampling) and 0.27 % (next-event + MIS); mirror exact |
+| Recorded ray pdf consistency | The same furnace rendered twice, once by lobe sampling alone and once with next-event estimation balanced by the power heuristic through the recorded pdf | the two estimators agree to 0.14 % on the glossy object |
+| Image-level parity | Replica transport at 512 spp against the same transport converged at 2048 spp | tonemapped RMSE 0.0140, mean linear deviation 0.0076; per-material ratios 0.9992–1.0005 |
+
+All five gates pass; `Results/ReflectionParityReport.txt` is the ledger and
+`Images/ReflectionParitySheet.png` shows the replica panel, the converged reference, the furnace relative-error
+map (black is zero error) and the amplified difference.
+
+### The one identity that matters
+
+The Heitz visible-normal draw has density `p(m) = D(m)·G1(cosθo)·|ωo·m|/cosθo`; because the masking term is
+evaluated on the *outgoing* direction it is constant over the draw, and the reflection Jacobian
+`|dωi/dm| = 4|ωo·m|` cancels the `|ωo·m|` factor. The sampled direction density is therefore exactly
+`D·G1(cosθo)/(4 cosθo)`, which is what `PushReflectionLobe` records, and the matching throughput weight
+`f·cosθi/p` collapses to `F·G2/G1`, which is what it ships. Both halves are asserted numerically above.
+
+### Audit outcome (negative result, stated plainly)
+
+The reflection transport of `Experimental/DeterministicPathTracer` — sampler, recorded pdf, continuation
+weight, delta mirror lobe and MIS bookkeeping — is **not** the source of the reflection complaint: every one
+of the five gates passes against closed-form radiometry. An earlier iteration of this oracle flagged the
+recorded pdf as inconsistent with the sampler; that conclusion was wrong and is retracted here — it came from
+using the unmasked `D·χ⁺` kernel and a left-handed tangent frame in the oracle's own comparison, both of which
+the analytic ring-norm gate now rules out by construction. The reflection complaint must therefore be pursued
+in the surrounding pipeline: how roughness is mapped to α, which geometry the reflection rays are traced
+against (the SDF/clipmap proxy versus the BVH), and the denoise/upsample path that consumes the result. Those
+three are not exercised by this oracle and remain open.
