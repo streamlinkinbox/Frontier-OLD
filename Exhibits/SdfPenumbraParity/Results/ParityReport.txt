@@ -1,0 +1,27 @@
+SDF penumbra parity capture - PROOF 11 emissive-sphere showcase
+scene: canonical orb (-1.38, 0.48, 1.02) r=0.40 radiance (19.5, 17.2, 13.8); column, pedestal, torus, grey sphere; cornell shells
+camera: eye (-0.10, -3.55, 1.48) target (-0.04, 0.42, 0.96) vfov 0.78 rad; panels 480x270; reference 96 spp
+clipmap: fine 64^3 @ 0.042 m + coarse 64^3 @ 0.090 m; casting-field distances; 1 radiosity exchange pass
+
+mode | penumbra width [m] | umbra min | tonemapped RMSE vs reference
+0 point-sample   |              0.000 |     0.000 | 0.0152 (vs direct-only PT)
+1 analytic cone  |              0.759 |     0.000 | 0.0092 (vs direct-only PT)
+2 voxel clipmap  |              0.754 |     0.000 | 0.0093 (vs direct-only PT)
+3 voxel + cone GI |              0.754 |     0.000 | 0.0338 (vs full PT)
+4 sobol cap      |              0.699 |     0.000 | 0.0336 (vs full PT)
+5 MC PT ref      |              0.729 |     0.000 | 0.0000 (vs full PT)
+
+legacy replication (arena/ad7fa01c-frontier formulae): analytic 0.684 m vs voxel 0.588 m (split 0.096 m)
+
+gates:
+[PASS] point-sample mode keeps zero penumbra width
+[PASS] analytic cone width within 10% of Monte Carlo width
+[PASS] voxel clipmap width within 10% of Monte Carlo width
+[PASS] spherical-cap width within 15% of Monte Carlo width
+[PASS] deep umbra retained by both deterministic modes
+[PASS] analytic cone panel within 0.020 tonemapped RMSE of direct-only Monte Carlo
+[PASS] voxel clipmap panel within 0.025 tonemapped RMSE of direct-only Monte Carlo
+[PASS] cone-radiosity panel within 0.035 tonemapped RMSE of full Monte Carlo
+[PASS] spherical-cap panel within 0.045 tonemapped RMSE of full Monte Carlo
+
+verdict: all parity gates pass

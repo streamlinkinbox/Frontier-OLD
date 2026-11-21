@@ -1737,3 +1737,18 @@ the 5ec53579 line already in the tree; the owner chose it over porting the demo'
 - **Deviation:** the post-commit sync rule (`SultanAladin/Frontier arena/11f31835-frontier`) conflicts with
   Arena session-branch discipline; all work stays on `arena/c8d71a98-frontier` until the final PR.
 - **Evidence:** `Exhibits/Networking/` (this entry's validation ledger).
+
+## SDF penumbra and GI parity oracle (2026-11-21, branch `arena/fd42105b-frontier-old`)
+
+- **Scope:** audit of the PROOF 11 emissive-sphere sheet delivered from `unassignedinbox/Frontier`
+  branch `arena/ad7fa01c-frontier` (user report: modes do not match when tested), plus a headless parity
+  oracle that re-implements all six renderers over one shared penumbra law, one occlusion predicate, an
+  unclamped MIS path-tracer reference and a depth-matched voxel cone-radiosity store.
+- **Findings:** nine concrete defects (per-mode cone scale ×0.86 and per-mode march envelopes, a third
+  penumbra law in the tier path, horizon-renormalisation bias, inconsistent sample budgets for one
+  quantity, cone-aim lift, a reference clamped at 3.5, gates with no cross-mode agreement check, cascade
+  seam and self-hit in cone taps). Legacy replication reproduces the committed report's own split
+  (0.684 m analytic vs 0.588 m voxel) on the canonical scene.
+- **Result:** corrected widths 0.759 / 0.754 / 0.699 m against a 0.729 m reference (all within gate),
+  tonemapped RMSE 0.0092 / 0.0093 vs direct-only PT and 0.0338 / 0.0336 vs full PT; all gates pass.
+- **Evidence:** `Exhibits/SdfPenumbraParity/` (capture source, repack tool, proof sheet, parity report).
