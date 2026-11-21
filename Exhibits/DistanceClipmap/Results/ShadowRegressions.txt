@@ -1,0 +1,59 @@
+=== CPU-Only (FRONTIER_SHADOW_VULKAN=OFF) Build & CTest ===
+-- The CXX compiler identification is GNU 12.2.0
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+-- Found Threads: TRUE
+-- Configuring done (0.3s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/user/Frontier-OLD/_ClaudeScratch/Build/ShadowsCpuOnly
+[1/4] Building CXX object CMakeFiles/SdfShadowValidation.dir/home/user/Frontier-OLD/Exhibits/DistanceClipmap/Code/SdfShadowValidation.cpp.o
+[2/4] Linking CXX executable SdfShadowValidation
+[3/4] Building CXX object CMakeFiles/SphereVehicleValidation.dir/home/user/Frontier-OLD/Exhibits/DistanceClipmap/Code/SphereVehicleValidation.cpp.o
+[4/4] Linking CXX executable SphereVehicleValidation
+Test project /home/user/Frontier-OLD/_ClaudeScratch/Build/ShadowsCpuOnly
+    Start 1: SixSdfShadowNumeric
+1/1 Test #1: SixSdfShadowNumeric ..............   Passed    2.92 sec
+
+100% tests passed out of 1
+
+Total Test time (real) =   2.93 sec
+=== Diffuse Transport Continuation CTests ===
+-- The CXX compiler identification is GNU 12.2.0
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+-- Found Threads: TRUE
+-- Found Vulkan: /home/user/Frontier-OLD/ExternalPackages/VulkanCompute/SwiftShader/libvulkan.so.1 (found version "1.4.321")  missing components: glslc glslangValidator
+-- Configuring done (0.4s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/user/Frontier-OLD/_ClaudeScratch/Build/Transport
+[1/12] Generating Shaders/ConvolveProbeIrradiance.spv, Shaders/ConvolveProbeIrradiance.spv.json
+[2/12] Generating Shaders/BounceConeSites.spv, Shaders/BounceConeSites.spv.json
+[3/12] Generating Shaders/BounceProbeRays.spv, Shaders/BounceProbeRays.spv.json
+[4/12] Generating Shaders/GatherProbeImage.spv, Shaders/GatherProbeImage.spv.json
+[5/12] Generating Shaders/ConvolveProbeMoments.spv, Shaders/ConvolveProbeMoments.spv.json
+[6/12] Generating Shaders/GatherConeImage.spv, Shaders/GatherConeImage.spv.json
+[7/12] Generating Shaders/InjectDirectionalRadiance.spv, Shaders/InjectDirectionalRadiance.spv.json
+[8/12] Generating Shaders/ReduceDirectionalMip.spv, Shaders/ReduceDirectionalMip.spv.json
+[9/12] Building CXX object CMakeFiles/TransportVulkan.dir/home/user/Frontier-OLD/Exhibits/DistanceClipmap/Code/TransportVulkan.cpp.o
+[10/12] Linking CXX executable TransportVulkan
+[11/12] Building CXX object CMakeFiles/TransportValidation.dir/home/user/Frontier-OLD/Exhibits/DistanceClipmap/Code/TransportValidation.cpp.o
+[12/12] Linking CXX executable TransportValidation
+Test project /home/user/Frontier-OLD/_ClaudeScratch/Build/Transport
+    Start 1: DiffuseTransportNumeric
+1/2 Test #1: DiffuseTransportNumeric ..........   Passed   24.43 sec
+    Start 2: DiffuseTransportVulkan
+2/2 Test #2: DiffuseTransportVulkan ...........   Passed   66.71 sec
+
+100% tests passed out of 2
+
+Total Test time (real) =  91.14 sec

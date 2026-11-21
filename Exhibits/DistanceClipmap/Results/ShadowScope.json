@@ -1,0 +1,150 @@
+{
+  "audited_revision": "4cab9133ef01022019f0bf4c71b9b328791306bd",
+  "request_source": "User-supplied image; labels transcribed, not runtime output",
+  "reference_image": {
+    "path": "Images/RequestedShadowAlgorithms.png",
+    "sha256": "6e03fa4704ed6cdc34a83b5057a12ddcc7ec91b92883ba0f3c0473062f74837f",
+    "width": 1232,
+    "height": 648,
+    "bytes": 3194300,
+    "generated_by_this_checkout": false
+  },
+  "requested_paths": [
+    {
+      "id": 0,
+      "label": "Point-sample SDF (no penumbra)",
+      "category": "hard-shadow baseline",
+      "implementation_accepted": false
+    },
+    {
+      "id": 1,
+      "label": "Analytic SDF cone penumbra",
+      "category": "analytic-field penumbra",
+      "implementation_accepted": false
+    },
+    {
+      "id": 2,
+      "label": "3D voxel SDF clipmap penumbra",
+      "category": "voxel-field penumbra",
+      "implementation_accepted": false
+    },
+    {
+      "id": 3,
+      "label": "3D voxel SDF penumbra + cone GI",
+      "category": "combined shadow and GI",
+      "implementation_accepted": false
+    },
+    {
+      "id": 4,
+      "label": "Hybrid SDF + Sobol spherical cap",
+      "category": "finite-source sampled visibility",
+      "implementation_accepted": false
+    },
+    {
+      "id": 5,
+      "label": "SDF Monte Carlo PT ref (96 spp)",
+      "category": "finite path-traced reference",
+      "implementation_accepted": false
+    }
+  ],
+  "reference_paths_per_pixel": 96,
+  "pinned_sources": [
+    {
+      "path": "Experimental/DistanceClipmap/RadianceScene.h",
+      "sha256": "a741396159b5b6516d48f3a65631ad499671ea5b112e6091c6af76f92bf1f019",
+      "excerpts": [
+        {
+          "anchor": "enum class VisibilityEvaluation",
+          "matches": [
+            {
+              "line": 120,
+              "text": "enum class VisibilityEvaluation : unsigned"
+            }
+          ]
+        },
+        {
+          "anchor": "ClipPenumbra  = 3",
+          "matches": [
+            {
+              "line": 125,
+              "text": "ClipPenumbra  = 3"
+            }
+          ]
+        },
+        {
+          "anchor": "return Vehicle.Trace(LocalOrigin, LocalDirection, Limit, true).Confirmed();",
+          "matches": [
+            {
+              "line": 310,
+              "text": "return Vehicle.Trace(LocalOrigin, LocalDirection, Limit, true).Confirmed();"
+            }
+          ]
+        },
+        {
+          "anchor": "LocalDistance.Sample(Pose.ToLocal(P)).Raw",
+          "matches": [
+            {
+              "line": 321,
+              "text": "float        Distance = Global ? Clipmap.Sample(P).Raw : LocalDistance.Sample(Pose.ToLocal(P)).Raw;"
+            }
+          ]
+        },
+        {
+          "anchor": "CapDirection(SunDirection, SunRadius, Pair)",
+          "matches": [
+            {
+              "line": 395,
+              "text": "const Vector Direction = CapDirection(SunDirection, SunRadius, Pair);"
+            }
+          ]
+        },
+        {
+          "anchor": "inline Image CapturePath",
+          "matches": [
+            {
+              "line": 624,
+              "text": "inline Image CapturePath(const RadianceScene& Scene, unsigned Sources, unsigned Samples, unsigned ScatteringCount)"
+            }
+          ]
+        },
+        {
+          "anchor": "const auto Surface = Scene.Trace(Origin, Direction);",
+          "matches": [
+            {
+              "line": 641,
+              "text": "const auto Surface = Scene.Trace(Origin, Direction);"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "Experimental/DistanceClipmap/Transport/DirectionalRadiance.h",
+      "sha256": "65bc10ee197913149e6884d2464bd2531ef77b4b511780612ff361971ee0938d",
+      "excerpts": [
+        {
+          "anchor": "class DirectionalRadianceAtlas",
+          "matches": [
+            {
+              "line": 61,
+              "text": "class DirectionalRadianceAtlas"
+            }
+          ]
+        },
+        {
+          "anchor": "Scene.Direct(Sites[Index].Surface, SourceMask, VisibilityEvaluation::Exact, Samples);",
+          "matches": [
+            {
+              "line": 302,
+              "text": "Scene.Direct(Sites[Index].Surface, SourceMask, VisibilityEvaluation::Exact, Samples);"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "contract_sha256": "10eff18fc4a8211981f8a5f55bf551a082e1c2d68fe78bb8760babca5a6414fd",
+  "generator_sha256": "1d4f2d961d4b2a951f0046e323775c7dd67ce27cbdc5e7ed85ffcea196209092",
+  "new_native_shadow_paths_executed": 0,
+  "renderer_accepted": false
+}

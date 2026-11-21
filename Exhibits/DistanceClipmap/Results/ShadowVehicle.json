@@ -1,0 +1,179 @@
+{
+  "passed": true,
+  "poses": [
+    {
+      "pose": 0,
+      "translation_m": [
+        0,
+        0,
+        0
+      ],
+      "rotation_cos_sin": [
+        1,
+        0
+      ],
+      "sphere_center_radius_m": [
+        -2.79999995232,
+        -1.29999995232,
+        2.40000009537,
+        0.649999976158
+      ],
+      "setup_cpu_ms": 878.727864,
+      "capture_cpu_ms": 10048.747126,
+      "rewritten_texels": [
+        110592,
+        110592,
+        110592
+      ]
+    },
+    {
+      "pose": 1,
+      "translation_m": [
+        0.779422879219,
+        0.110000014305,
+        0
+      ],
+      "rotation_cos_sin": [
+        0.987874567509,
+        0.155254006386
+      ],
+      "sphere_center_radius_m": [
+        -2.41028857231,
+        -1.45000004768,
+        2.5299038887,
+        0.649999976158
+      ],
+      "setup_cpu_ms": 898.084584,
+      "capture_cpu_ms": 9686.485347,
+      "rewritten_texels": [
+        67377,
+        17987,
+        3661
+      ]
+    },
+    {
+      "pose": 2,
+      "translation_m": [
+        0.779422819614,
+        0.330000013113,
+        0
+      ],
+      "rotation_cos_sin": [
+        0.987874567509,
+        0.155253991485
+      ],
+      "sphere_center_radius_m": [
+        -2.41028857231,
+        -1.75,
+        2.5299038887,
+        0.649999976158
+      ],
+      "setup_cpu_ms": 946.827605,
+      "capture_cpu_ms": 9565.948789,
+      "rewritten_texels": [
+        65698,
+        12475,
+        1277
+      ]
+    },
+    {
+      "pose": 3,
+      "translation_m": [
+        -7.86805003372e-08,
+        0.439999997616,
+        0
+      ],
+      "rotation_cos_sin": [
+        1,
+        -1.57361004227e-08
+      ],
+      "sphere_center_radius_m": [
+        -2.79999995232,
+        -1.90000009537,
+        2.40000009537,
+        0.649999976158
+      ],
+      "setup_cpu_ms": 848.570597,
+      "capture_cpu_ms": 9671.654032,
+      "rewritten_texels": [
+        70452,
+        20376,
+        5986
+      ]
+    },
+    {
+      "pose": 4,
+      "translation_m": [
+        -0.779422998428,
+        0.329999953508,
+        0
+      ],
+      "rotation_cos_sin": [
+        0.987874567509,
+        -0.155254021287
+      ],
+      "sphere_center_radius_m": [
+        -3.18971133232,
+        -1.75,
+        2.27009630203,
+        0.649999976158
+      ],
+      "setup_cpu_ms": 1002.002836,
+      "capture_cpu_ms": 9540.334207,
+      "rewritten_texels": [
+        69301,
+        18072,
+        3682
+      ]
+    },
+    {
+      "pose": 5,
+      "translation_m": [
+        -0.779422700405,
+        0.109999924898,
+        0
+      ],
+      "rotation_cos_sin": [
+        0.987874567509,
+        -0.155253961682
+      ],
+      "sphere_center_radius_m": [
+        -3.18971133232,
+        -1.45000004768,
+        2.27009630203,
+        0.649999976158
+      ],
+      "setup_cpu_ms": 842.132903,
+      "capture_cpu_ms": 9831.554337,
+      "rewritten_texels": [
+        65565,
+        12475,
+        1277
+      ]
+    }
+  ],
+  "completed": true,
+  "renderer_accepted": false,
+  "sphere_only": true,
+  "vehicle_facets": 25068,
+  "unsigned_bake_extent": [
+    80,
+    40,
+    32
+  ],
+  "analytic_vehicle_sdf": false,
+  "contact_refinement": "original triangles",
+  "native_width": 480,
+  "native_height": 270,
+  "stale_rejections": 6,
+  "visibility_segments": 6144,
+  "visibility_differences": 0,
+  "bake_march_steps": 18204,
+  "empty_marched_segments": 468,
+  "direct_cull_difference": 0,
+  "cold_clip_maximum": 0,
+  "cold_image_maximum": 0,
+  "cache_clear_rgb_difference": 0.0674132704735,
+  "cache_restore_difference": 0,
+  "source_off_black_pixels": 129600
+}

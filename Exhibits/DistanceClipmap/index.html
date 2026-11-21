@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Frontier · Distance & radiance validation</title>
+<style>
+:root{color-scheme:dark;--ink:#edf0f7;--muted:#9da9bd;--line:#293243;--panel:#151d29;--cyan:#70dfd1;--red:#ff9b98}*{box-sizing:border-box}body{margin:0;background:#0c111a;color:var(--ink);font:15px/1.6 ui-sans-serif,system-ui,sans-serif}header,main,footer{max-width:1500px;margin:auto;padding:30px clamp(18px,4vw,60px)}header{padding-top:46px;padding-bottom:8px}.eyebrow{color:var(--cyan);letter-spacing:.16em;text-transform:uppercase;font-size:11px;font-weight:750}h1{font-size:clamp(30px,4vw,49px);line-height:1.1;letter-spacing:-.04em;margin:14px 0 18px}h2{font-size:24px;letter-spacing:-.025em;margin:0 0 8px}h3{font-size:16px;margin:0 0 9px}p{margin:9px 0;color:var(--muted)}strong{color:var(--ink)}a{color:var(--cyan);text-underline-offset:4px}nav{display:flex;gap:20px;flex-wrap:wrap;margin:24px 0}nav a{color:#cad5e8;font-size:13px}section{margin:0 0 48px;scroll-margin-top:25px}.notice{border:1px solid #75494d;background:#2a1b24;border-radius:12px;padding:20px 23px;margin-top:22px}.notice p{color:#dcbabf}.badge{display:inline-block;border:1px solid var(--line);border-radius:30px;padding:4px 10px;font-size:11px;letter-spacing:.05em;color:var(--cyan);margin:0 7px 7px 0}.badge.reject{color:var(--red);border-color:#654149}.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:26px 0}.metric{border:1px solid var(--line);border-radius:12px;padding:19px;background:var(--panel)}.metric b{font-size:27px;display:block;letter-spacing:-.04em}.metric span{font-size:12px;color:var(--muted)}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}.card{border:1px solid var(--line);background:var(--panel);border-radius:12px;overflow:hidden}.card img{display:block;width:100%;height:auto;aspect-ratio:16/9;background:#000;object-fit:contain}.card .copy{padding:15px 17px}.card p{font-size:12px;margin:4px 0}.card a{font-size:12px}.toolbar{display:flex;gap:15px;align-items:center;flex-wrap:wrap;margin:18px 0}select,button,input{accent-color:var(--cyan)}select,button{background:#1d293a;color:var(--ink);border:1px solid #3a4b63;border-radius:8px;padding:9px 12px;font:inherit}button{cursor:pointer}.small{font-size:12px;color:var(--muted)}table{border-collapse:collapse;width:100%;font-size:13px;margin:16px 0}th,td{text-align:left;border-bottom:1px solid var(--line);padding:12px 13px;vertical-align:top}th{color:var(--muted);font-weight:550;background:#121a25}.overflow{overflow:auto}.good{color:var(--cyan)}.bad{color:var(--red)}code,pre{font:12px/1.7 ui-monospace,SFMono-Regular,Consolas,monospace}code{color:#cae9e2}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#101824;padding:17px;border-radius:9px;color:#a7b7ce}.split{position:relative;background:#000;aspect-ratio:16/9;overflow:hidden}.split img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}.split .above{clip-path:inset(0 50% 0 0)}.split .divider{position:absolute;left:50%;top:0;bottom:0;border-left:2px solid #fff;pointer-events:none}.split-caption{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin:8px 0}.legend{padding:12px 16px;border-left:3px solid var(--cyan);font-size:13px;color:var(--muted);background:#111c26}.links{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;margin-top:18px}footer{border-top:1px solid var(--line);color:var(--muted);font-size:12px;padding-bottom:40px}.status{font-size:12px;color:var(--muted)}details{border:1px solid var(--line);border-radius:9px;padding:12px 16px;margin:10px 0}summary{cursor:pointer}#audit-findings li{margin-bottom:12px}#motion-scrub{flex:1;min-width:200px}#benchmark-status{font-weight:650}.drawing{font-family:ui-monospace,monospace;white-space:pre;overflow:auto;color:#b8cbd5;line-height:1.9;font-size:12px;margin:20px 0}.error{color:var(--red)}@media(max-width:850px){.summary{grid-template-columns:repeat(2,1fr)}.grid.three{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:550px){.grid,.grid.three{grid-template-columns:1fr}.summary{gap:8px}.metric{padding:13px}header,main,footer{padding-left:16px;padding-right:16px}}
+</style>
+</head>
+<body>
+<header>
+<div class="eyebrow">Frontier / native C++ / retained evidence</div>
+<h1>ControlVehicle<br>distance &amp; lighting audit.</h1>
+<p>Actual ControlVehicle geometry · 480 × 270 native renders · deterministic sampling · no denoisers.</p>
+<div><span class="badge">Isolated numerical checks</span><span class="badge">SwiftShader CPU Vulkan</span><span class="badge reject">NOT a finished renderer</span></div>
+<div class="notice">
+<strong>Quality and integration gate: NOT ACCEPTED.</strong>
+<p>The raw voxel controls fail visibly. GI retains finite-sample grain and cache approximation. This is a matte diffuse diagnostic, not the production paint/glass renderer. No physical GPU, Windows, editor, 60/120 FPS or real-life accuracy claim is made.</p>
+<p><strong>The comparisons below are newly authored negative controls versus finite triangle references—not before/after captures of the linked lab, and not photographs.</strong> Nothing here silently replaces the engine.</p>
+<p id="top-benchmark">The retained matched CPU speed gate also fails. See the measured comparison below; no faster-than-triangles claim is made.</p>
+</div>
+<nav><a href="#shadows">Shadows</a><a href="#sources">Source isolation / GI</a><a href="#motion">Movement</a><a href="#distance">Distance debug</a><a href="#cache">Surface cache</a><a href="#path">Path quadrature</a><a href="#measurements">Measurements</a><a href="#audit">Source audit / limits</a></nav>
+</header>
+<main>
+<section aria-label="Executed checks">
+<div class="summary">
+<div class="metric"><b>25,068</b><span>unchanged vehicle facets, body + four wheels</span></div>
+<div class="metric"><b id="ray-count">Loading…</b><span>native hybrid / triangle visibility probes</span></div>
+<div class="metric"><b id="device-rays">Loading…</b><span>Vulkan probes across four rigid poses</span></div>
+<div class="metric"><b id="nan-count">Loading…</b><span>NaN / Inf channels in retained captures</span></div>
+</div>
+<p class="small" id="load-status">Reading retained JSON results. No live render is being simulated in the browser.</p>
+</section>
+
+<section id="shadows">
+<div class="eyebrow">01 / exact contact matters</div><h2>Raw voxel penumbrae versus triangle refinement</h2>
+<p>All three use the same camera, geometry, source settings, 32 samples per extended source and four primary samples. Images are full native 480 × 270; CSS enlargement is display-only.</p>
+<div class="grid three">
+<article class="card"><img src="Images/LocalVoxelPenumbra.png" alt="Actual raw local voxel penumbra control"><div class="copy"><h3 class="bad">Local voxel control · rejected</h3><p>Heuristic distance/cone visibility. Inspect streaking, contact and thin louvers.</p><a href="Images/LocalVoxelPenumbra.png">Original PNG</a></div></article>
+<article class="card"><img src="Images/ClipmapPenumbra.png" alt="Actual raw clipmap penumbra control"><div class="copy"><h3 class="bad">Clipmap control · rejected</h3><p>A clipmap does not restore sub-voxel geometry or certify a penumbra integral.</p><a href="Images/ClipmapPenumbra.png">Original PNG</a></div></article>
+<article class="card"><img src="Images/HybridDirect.png" alt="Actual conservative hybrid visibility render"><div class="copy"><h3>Hybrid · triangle-refined</h3><p>Conservative empty-space strides; original triangle interval decides contact. Matched CPU float image equals triangle-only.</p><a href="Images/HybridDirect.png">Original PNG</a></div></article>
+</div>
+<div class="toolbar"><label for="shadow-choice">Compare</label><select id="shadow-choice"><option value="LocalVoxelPenumbra">Raw local control / triangle reference</option><option value="ClipmapPenumbra">Raw clipmap control / triangle reference</option><option value="HybridDirect">Hybrid / triangle reference</option></select><input id="shadow-split" type="range" min="0" max="100" value="50" aria-label="Comparison divider"></div>
+<div class="split-caption"><span id="shadow-left">Raw local control</span><span>Triangle-only matched reference</span></div>
+<div class="card split"><img src="Images/CombinedDirect.png" alt="Triangle-only reference"><img id="shadow-above" class="above" src="Images/LocalVoxelPenumbra.png" alt="Selected comparison"><div class="divider" id="shadow-divider"></div></div>
+<p class="small">Drag the divider. Identical hybrid/triangle pixels establish bounded visibility parity—not universal correctness or a faster renderer.</p>
+<div class="grid"><article class="card"><img src="Images/LocalShadowDifference.png" alt="Absolute local control error amplified eight times"><div class="copy">Absolute local/triangle RGB difference, display exposure ×8.</div></article><article class="card"><img src="Images/ClipmapShadowDifference.png" alt="Absolute clipmap control error amplified eight times"><div class="copy">Absolute clipmap/triangle RGB difference, display exposure ×8.</div></article></div>
+</section>
+
+<section id="sources">
+<div class="eyebrow">02 / no hidden fill</div><h2>Emission, point, Sun, rectangle—and the combined case</h2>
+<p>Emissive-only means the vehicle’s actual head/tail/rim facets, with point/Sun/rectangle/sky all off. No auxiliary lamp is inserted in that selection. The other sources are explicit radiometric calibration fixtures. Original lamp geometry/radiance is retained, not photometric IES profiles or production materials. The rectangle is a next-event source, not visible geometry or an occluder.</p>
+<div class="toolbar"><label for="source-choice">Source selection</label><select id="source-choice"><option>Emissive</option><option>Point</option><option>Sun</option><option>Area</option><option>Combined</option></select><span class="small">GI views: explicit ×8 display exposure, no filtering.</span></div>
+<div class="grid three">
+<article class="card"><img id="source-direct" src="Images/EmissiveOnlyDirect.png" alt="Selected source direct lighting"><div class="copy"><h3>Direct + visible self-radiance</h3><p>Display exposure ×1. No environment ambient.</p></div></article>
+<article class="card"><img id="source-reference" src="Images/EmissiveReferenceGi512.png" alt="Selected source indirect-only triangle reference"><div class="copy"><h3>Indirect only · finite reference</h3><p id="source-reference-budget">512 hemisphere samples × four primary samples. Excludes direct arrival.</p></div></article>
+<article class="card"><img id="source-cached" src="Images/EmissiveCachedGi512.png" alt="Selected source indirect-only cache gather"><div class="copy"><h3>Indirect only · surface cache</h3><p>Triangle-ray gather of reflected cache radiance. This is not DDGI or voxel-cone radiance GI.</p></div></article>
+</div>
+<div class="legend">The grain in the isolated indirect images is real finite-quadrature error. Deterministic does not mean noise-free. No history, temporal/spatial denoiser, firefly clamp or hidden lower-resolution buffer is used.</div>
+<div class="grid" style="margin-top:18px"><article class="card"><img src="Images/SourcesOffIncludingGi.png" alt="Expected exactly black all-source-off control"><div class="copy"><h3>All sources off · expected black</h3><p>The native direct + cached-GI float buffer is exactly zero. This black image is a control, not a failed beauty render.</p></div></article><article class="card"><img src="Images/CombinedWithGi.png" alt="Native direct plus finite indirect component sum"><div class="copy"><h3>Combined direct + indirect</h3><p>Linear sum of retained direct and 512-sample one-bounce reference components; exposure ×1. Not a production PBR image.</p></div></article></div>
+</section>
+
+<section id="motion">
+<div class="eyebrow">03 / pose, lighting and distance change together</div><h2>Twelve actual rigid poses. No image warping.</h2>
+<p>Local vehicle geometry and its bake remain unchanged. Rays are transformed to local space; old/new truncated influence regions repair the CPU toroidal clips. Every night cache is freshly relit. This is prescribed kinematics—not a driving/cloth simulation.</p>
+<div class="toolbar"><button id="motion-play">Pause</button><input id="motion-scrub" type="range" min="0" max="11" value="0" step="1" aria-label="Vehicle pose"><span id="motion-time" class="small">Pose 0 / t = 0.000 s</span></div>
+<div class="grid three">
+<article class="card"><img id="motion-lit" src="Images/MotionLit00.png" alt="Moving vehicle combined direct illumination"><div class="copy"><h3>Combined · hybrid shadows</h3><p>Four primary samples, 32 samples per extended source. No GI in this daytime animation.</p></div></article>
+<article class="card"><img id="motion-night" src="Images/Motion00.png" alt="Moving vehicle emissive-only lighting and cached GI"><div class="copy"><h3>Vehicle emission only</h3><p>Direct + 64-sample cached one-bounce GI; one primary sample. Grain/aliasing remain disclosed.</p></div></article>
+<article class="card"><img id="motion-distance" src="Images/Motion00Distance.png" alt="Distance clipmap slice from the corresponding moving pose"><div class="copy"><h3>Corresponding distance slice</h3><p>Level 1, z = 0.55 m. Amber marks proximity, not a certified vehicle interior.</p></div></article>
+</div>
+<div class="links"><a href="Images/VehicleMotion.png">Lossless RGB APNG: lit vehicle</a><a href="Images/EmissiveMotion.png">Lossless RGB APNG: emissive-only</a><a href="Images/DistanceMotion.png">APNG: moving distance</a><a href="Images/VehicleMotion.gif">GIF (palette derivative)</a><a href="Images/MotionAllPoses.png">All twelve lit poses</a><a href="Images/NightMotionAllPoses.png">All twelve night poses</a><a href="Images/DistanceMotionAllPoses.png">All twelve distance slices</a></div>
+<p class="small">Animation playback is not a frame-rate measurement. Twelve poses cover a four-second loop. APNG poses exactly match the individual RGB PNGs; GIF adds palette quantization.</p>
+</section>
+
+<section id="distance">
+<div class="eyebrow">04 / inspect what is actually sampled</div><h2>Signed where justified. Unsigned where necessary.</h2>
+<p>The identical linked vehicle body has 104 exact-coordinate boundary edges and 98 edges with more than two incidences. That is not a certified watertight solid. Vehicle traversal uses an unsigned triangle distance; closed boxes use signed distances. No thickened or proxy car substitutes for it.</p>
+<div class="grid three">
+<article class="card"><img src="Images/GpuDistanceLevel0.png" alt="Actual Vulkan level zero distance buffer readback"><div class="copy"><h3>Vulkan level 0 · 0.125 m</h3><p>48³ toroidal samples; actual GPU buffer readback, false-coloured on CPU. Black outside coverage.</p></div></article>
+<article class="card"><img src="Images/GpuDistanceLevel1.png" alt="Actual Vulkan level one distance buffer readback"><div class="copy"><h3>Vulkan level 1 · 0.25 m</h3><p>z = 0.55 m slice. Amber proximity; blue distance; red signed closed-primitive interior.</p></div></article>
+<article class="card"><img src="Images/GpuDistanceLevel2.png" alt="Actual Vulkan level two distance buffer readback"><div class="copy"><h3>Vulkan level 2 · 0.5 m</h3><p>Three levels total 331,776 cells. No 8-bit distance quantization.</p></div></article>
+</div>
+<div class="grid three" style="margin-top:18px">
+<article class="card"><img src="Images/DistanceDebug3.png" alt="Baked local vehicle unsigned distance slice"><div class="copy"><h3>Actual baked local vehicle field</h3><p>80 × 40 × 32 Float32 distances. Outside the bake, the view uses distance to its enclosing box—a lower bound, not exact vehicle distance. Thin sheets are not resolved reliably.</p></div></article>
+<article class="card"><img src="Images/DistanceDebug4.png" alt="Clipmap coverage debug"><div class="copy"><h3>Selected clip coverage</h3><p>Green: finest; blue: middle; red: coarsest. Unknown coverage triggers triangles, not “empty”.</p></div></article>
+<article class="card"><img src="Images/DistanceDebug5.png" alt="Signed calibration primitive debug"><div class="copy"><h3>Closed-primitive SDF sign</h3><p>Red inside, blue outside. The sign is not fabricated for the open vehicle body.</p></div></article>
+</div>
+</section>
+
+<section id="cache">
+<div class="eyebrow">05 / verify the cache contributes</div><h2>A readable cache, and a reproduced side-selection defect</h2>
+<div class="grid"><article class="card"><img src="Images/GpuPointSurfaceCache.png" alt="GPU-computed vehicle point-light surface radiance cache"><div class="copy"><h3>GPU point-light cache · readback</h3><p>Actual resident Vulkan cache values projected onto CPU-traced camera hits. Only vehicle cache sites are shown; this is not a complete GPU-rendered image.</p></div></article><article class="card"><img id="source-cache" src="Images/EmissiveSurfaceCache.png" alt="CPU source-isolated diffuse cache view"><div class="copy"><h3>Source-selected CPU cache</h3><p>Raw reflected radiance at actual facet/ground sites. No self-radiance is double-counted in the indirect term.</p></div></article></div>
+<p><strong>The outward-only defect was caught in this new isolated prototype, not proven to exist in the linked engine.</strong> It disagreed on 4,550 reverse-side facets. Separate front/back entries now match all 25,068 tested reverse sides; the outward-only negative control still fails.</p>
+<div class="grid three">
+<article class="card"><img src="Images/CombinedOutwardOnlyGi512.png" alt="Reproduced outward-only cache negative control"><div class="copy"><h3>Outward-only control · rejected</h3><p>Explicit reproduction of the prototype’s former side-selection defect. Same gather budget and exposure ×8.</p></div></article>
+<article class="card"><img src="Images/CombinedCachedGi512.png" alt="Corrected two-sided cache indirect render"><div class="copy"><h3>Correct side · cache approximation remains</h3><p>The logical side defect is fixed. Finite facet/ground cache resolution is still an approximation.</p></div></article>
+<article class="card"><img src="Images/CombinedReferenceGi512.png" alt="Uncached finite indirect reference"><div class="copy"><h3>Uncached finite reference</h3><p>Fresh secondary-hit direct evaluation. This finite quadrature is not real-life ground truth.</p></div></article>
+</div>
+<p id="cache-read-summary" class="small"></p>
+<p id="cache-quality-summary" class="bad">Read the retained comparisons before attributing any image-quality improvement to this logical correction.</p>
+<p class="small">Cache relighting is explicit after each motion pose. There is no automatic pose/light revision tracking. Hybrid direct visibility and cached GI are separate selections; this is not a completed SDF/cone/cache radiance pipeline.</p>
+</section>
+
+<section id="path">
+<div class="eyebrow">06 / deterministic ≠ converged</div><h2>Finite diffuse path quadrature, without denoising</h2>
+<p>Distinct Joe–Kuo Sobol dimensions drive subpixels, sources and bounce directions. Three scattering sites, next-event source integration, no radiance clamp, no throughput cutoff and no roulette. Missing deeper transport is a declared finite-depth bias.</p>
+<div class="grid"><article class="card"><img src="Images/PathTrace.png" alt="128 sample finite diffuse path rendering"><div class="copy"><h3>128 samples per pixel</h3><p>Actual native accumulation. No history or denoiser.</p></div></article><article class="card"><img src="Images/PathTrace512.png" alt="512 sample finite diffuse path rendering"><div class="copy"><h3>512 samples per pixel</h3><p>Four times the samples—not a free or equal-time quality improvement. Still not a full-material path tracer.</p></div></article></div>
+<div class="legend">No claim of zero noise, zero artifacts, unbiased full transport, caustic convergence, measured real-world matching or GPU real-time performance.</div>
+</section>
+
+<section id="measurements">
+<div class="eyebrow">07 / measured, not estimated</div><h2>Acceptance and speed are separate questions</h2>
+<p id="benchmark-status">Loading matched benchmark…</p>
+<img src="Images/Benchmark.png" alt="Measured equal-image CPU timing chart" style="display:block;width:100%;max-width:960px;height:auto;border:1px solid var(--line);border-radius:12px">
+<div class="overflow"><table><thead><tr><th>Check</th><th>Observed</th><th>Boundary</th></tr></thead><tbody id="measurement-rows"></tbody></table></div>
+<div class="drawing">Unchanged FCT1 vehicle → production bounds builder → local triangle atlas
+                                     ├─ native CPU reference / radiance captures
+                                     └─ C++ Vulkan: bake → barrier → clips → barrier → cache → gather
+
+Vehicle: unsigned distance  +  closed calibration SDFs
+                 ↓ conservative lower-distance interval
+          empty-space stride OR original triangle refinement
+                 ↓
+       measured visibility parity, NOT a realism guarantee</div>
+<details><summary>Matched benchmark samples (five alternating pairs)</summary><pre id="benchmark-json"></pre></details>
+<details><summary>GPU device, cache ablation and motion readbacks</summary><pre id="vulkan-json"></pre></details>
+<details><summary>Pixel checks and float-buffer interpretation</summary><p class="small">Stored buffers are zlib-compressed top-down little-endian Float32 RGB, shape 270 × 480 × 3. Linear HDR values above one are expected—not “clipping”. All-source-off black is expected. Debug palettes intentionally include full-scale channels.</p><pre>import zlib, numpy as np
+rgb = np.frombuffer(zlib.decompress(open("Buffers/CombinedDirect.f32.zlib", "rb").read()), "&lt;f4").reshape(270,480,3)</pre><a href="Results/PixelChecks.json">Every capture’s statistics and hashes</a></details>
+<div class="links"><a href="Results/Benchmark.json">Benchmark JSON</a><a href="Results/Numeric.json">Native numerical checks</a><a href="Results/Comparisons.json">Linear RGB comparisons</a><a href="Results/Manifest.json">Source hashes / configuration</a><a href="Results/Footprints.json">Six-shader layout checks</a><a href="Results/Consumption.json">Runtime consumption ablations</a><a href="Results/Timings.csv">All initial capture timings</a><a href="Inspection.md">Manual visual inspection</a></div>
+</section>
+
+<section id="audit">
+<div class="eyebrow">08 / pinned source audit</div><h2>The linked branch does not justify a blind port</h2>
+<ul id="audit-findings">
+<li><strong>The linked lighting plan rejects SDF direct shadows.</strong> It explicitly reports thin-car/louver leaks. Its GTX timing table is labelled estimates, not physical-GPU evidence.</li>
+<li><strong>The linked C++ demo enables denoisers by default.</strong> Its GI SDF construction skips triangles; radiance/throughput clamps and fixed light factors prevent calling it an uncompromised physical reference.</li>
+<li><strong>The inspected Slang “cone GI” input is sky visibility.</strong> It only multiplies SkyRadiance; it has no emissive material/radiance input. With zero sky it cannot demonstrate vehicle-emissive GI. This source fact is not an execution claim about every other GI route.</li>
+<li><strong>The linked deterministic tracer documents its own limits.</strong> Finite limits/cutoff are biased; shared samples can produce structured artifacts; only software-device testing is reported in the inspected README.</li>
+<li><strong>Cloth and shadow-lab HTML exist in the linked repository, not in this checkout’s same paths.</strong> This checkout has a draped-cloth specimen. No cloth/editor migration is claimed.</li>
+</ul>
+<p class="small">Reference pinned to <code>c205cb698288ccd90bf909e25e28ce28d48d0dfa</code>. Work stays on <code>arena/f2d37e4b-frontier</code>; no branch was switched.</p>
+<div class="links"><a href="Results/SourceAudit.json">Exact source paths, line excerpts, hashes and vehicle identity</a><a href="README.md">Reproduction / remaining work</a><a href="https://github.com/eosclient0001-rgb/Frontier/tree/arena%2Ff2d37e4b-frontier/Experimental/DistanceClipmap">Native prototype on GitHub</a></div>
+<div class="notice"><strong>Still required before engine integration</strong><p>Production PBR/glass and emitter semantics; converged artifact acceptance without denoisers; voxel-cone/DDGI implementation and validation; complete GPU radiance path; GPU dirty-region repair and device-local allocation strategy; broader geometry/light/camera tests; equal-quality speed measurements on the user’s GPU; actual editor swapchain/VSync and 60/120 FPS pacing. The current prototype does not satisfy these gates.</p></div>
+</section>
+</main>
+<footer>Retained native evidence, not AI-generated illustration. The browser displays files; it does not impersonate a GPU renderer. No production engine code was replaced.</footer>
+<script>
+'use strict';
+
+const RetrieveControl = Id => document.getElementById(Id);
+const RetrieveReport = async Name =>
+{
+    const Response = await fetch('Results/' + Name + '.json');
+    if (!Response.ok) throw new Error(Name + ': HTTP ' + Response.status);
+    return Response.json();
+};
+
+function AppendMeasurement(Title, Result, Scope)
+{
+    const TableRow = document.createElement('tr');
+    for (const Text of [Title, Result, Scope])
+    {
+        const Cell = document.createElement('td');
+        Cell.textContent = Text;
+        TableRow.append(Cell);
+    }
+    RetrieveControl('measurement-rows').append(TableRow);
+}
+
+RetrieveControl('shadow-choice').addEventListener('change', Event =>
+{
+    RetrieveControl('shadow-above').src = 'Images/' + Event.target.value + '.png';
+    RetrieveControl('shadow-left').textContent = Event.target.selectedOptions[0].text.split(' / ')[0];
+});
+RetrieveControl('shadow-split').addEventListener('input', Event =>
+{
+    const Percent = Number(Event.target.value);
+    RetrieveControl('shadow-above').style.clipPath = `inset(0 ${100 - Percent}% 0 0)`;
+    RetrieveControl('shadow-divider').style.left = Percent + '%';
+});
+RetrieveControl('source-choice').addEventListener('change', Event =>
+{
+    const Source = Event.target.value;
+    const HighBudget = ['Emissive', 'Combined'].includes(Source);
+    const BudgetSuffix = HighBudget ? '512' : '';
+    RetrieveControl('source-direct').src = 'Images/' + Source + 'OnlyDirect.png';
+    RetrieveControl('source-reference').src = 'Images/' + Source + 'ReferenceGi' + BudgetSuffix + '.png';
+    RetrieveControl('source-cached').src = 'Images/' + Source + 'CachedGi' + BudgetSuffix + '.png';
+    RetrieveControl('source-cache').src = 'Images/' + Source + 'SurfaceCache.png';
+    RetrieveControl('source-reference-budget').textContent = (HighBudget ? '512' : '128') +
+        ' hemisphere samples × four primary samples. Excludes direct arrival.';
+});
+
+let Playing = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+let Pose = 0;
+let LastPose = -1;
+let OffsetMilliseconds = performance.now();
+RetrieveControl('motion-play').textContent = Playing ? 'Pause' : 'Play';
+
+function ProjectPose(Index)
+{
+    const Suffix = String(Index).padStart(2, '0');
+    RetrieveControl('motion-lit').src = 'Images/MotionLit' + Suffix + '.png';
+    RetrieveControl('motion-night').src = 'Images/Motion' + Suffix + '.png';
+    RetrieveControl('motion-distance').src = 'Images/Motion' + Suffix + 'Distance.png';
+    RetrieveControl('motion-scrub').value = Index;
+    RetrieveControl('motion-time').textContent = `Pose ${Index} / t = ${(Index / 3).toFixed(3)} s`;
+    LastPose = Index;
+}
+RetrieveControl('motion-play').addEventListener('click', () =>
+{
+    Playing = !Playing;
+    RetrieveControl('motion-play').textContent = Playing ? 'Pause' : 'Play';
+    if (Playing) OffsetMilliseconds = performance.now() - Pose * 4000 / 12;
+});
+RetrieveControl('motion-scrub').addEventListener('input', Event =>
+{
+    Playing = false;
+    RetrieveControl('motion-play').textContent = 'Play';
+    Pose = Number(Event.target.value);
+    ProjectPose(Pose);
+});
+function AdvancePlayback(Milliseconds)
+{
+    if (Playing)
+    {
+        Pose = Math.floor(((Milliseconds - OffsetMilliseconds) % 4000) / 4000 * 12);
+        if (Pose !== LastPose) ProjectPose(Pose);
+    }
+    requestAnimationFrame(AdvancePlayback);
+}
+requestAnimationFrame(AdvancePlayback);
+
+Promise.all(['Numeric', 'Vulkan', 'PixelChecks', 'Benchmark', 'Comparisons', 'Consumption', 'CacheSideAfter']
+    .map(RetrieveReport)).then(([Numeric, Vulkan, Pixels, Benchmark, Comparisons, Consumption, Cache]) =>
+{
+    RetrieveControl('ray-count').textContent = Numeric.tested_hybrid_rays.toLocaleString();
+    RetrieveControl('device-rays').textContent = (Vulkan.probe_count_per_pose * Vulkan.poses).toLocaleString();
+    RetrieveControl('nan-count').textContent = Pixels.captures.reduce(
+        (Sum, Entry) => Sum + Entry.nan_channels + Entry.inf_channels, 0);
+    RetrieveControl('load-status').textContent = `${Pixels.captures.length} retained native-size captures · ` +
+        `${Numeric.assertions.toLocaleString()} native assertions · no generated illustration or denoiser.`;
+
+    const Faster = Benchmark.speed_gate_passed;
+    const DeltaPercent = (Benchmark.hybrid_median_ms / Benchmark.exact_median_ms - 1) * 100;
+    RetrieveControl('top-benchmark').textContent = Faster ?
+        'This fixture meets the narrow CPU timing gate; the quality and integration gates still do not pass.' :
+        `Matched CPU hybrid median time is ${DeltaPercent.toFixed(2)}% slower than triangle-only. ` +
+        'The required faster-and-better gate FAILS.';
+    RetrieveControl('benchmark-status').textContent =
+        `CPU triangle-only median: ${Benchmark.exact_median_ms.toFixed(1)} ms. ` +
+        `Hybrid: ${Benchmark.hybrid_median_ms.toFixed(1)} ms. ` +
+        `Ratio ${Benchmark.exact_over_hybrid_speed_ratio.toFixed(3)}×. ` +
+        (Faster ? 'This fixture meets the narrow CPU timing gate; broader quality/hardware gates do not pass.' :
+            'The matched CPU speed gate FAILS: no faster-than-triangles claim.');
+    RetrieveControl('benchmark-status').className = Faster ? 'good' : 'bad';
+
+    AppendMeasurement('Native exact / hybrid',
+        Numeric.hybrid_visibility_disagreements + ' mismatches / ' + Numeric.tested_hybrid_rays + ' rays',
+        'One bounded scene, not all geometry or scales.');
+    AppendMeasurement('GPU exact / hybrid',
+        (Vulkan.static_visibility_mismatches + Vulkan.moving_visibility_mismatches) + ' mismatches / ' +
+        (Vulkan.probe_count_per_pose * Vulkan.poses) + ' probes',
+        'Native C++ Vulkan, software CPU device type ' + Vulkan.device_type + '.');
+    AppendMeasurement('GPU local / clip parity',
+        Vulkan.local_max_error_m + ' / ' + Vulkan.clip_max_error_m + ' m max',
+        '102,400 local + 331,776 clip samples.');
+    AppendMeasurement('GPU cache', Vulkan.cache_max_radiance_error.toExponential(3) + ' max RGB error',
+        'Point source, two-sided vehicle-facet cache only.');
+    AppendMeasurement('Cache-side correction', Cache.disagreements + ' mismatches / ' + Cache.tested_reverse_sides,
+        'New prototype defect reproduced before correction; not an upstream-engine finding.');
+    AppendMeasurement('CPU distance consumption',
+        Consumption.local_bake_ablation_altered_clip_texels.toLocaleString() + ' clip cells change when bake is cleared; ' +
+        Consumption.queries_with_altered_step_count.toLocaleString() + ' query step counts change when clip lowers are cleared',
+        'Actual data-flow ablation. Triangle-refined visibility stays equal; not a speed claim.');
+    AppendMeasurement('CPU radiance consumption',
+        Consumption.positive_cache_receivers + ' positive receivers become exactly black when only cache RGB is cleared',
+        'Direct lighting is unchanged; restoring cache RGB restores indirect RGB bit-for-bit.');
+    AppendMeasurement('Full-size images', 'Hybrid / exact / repeated float images match',
+        'Radiometric model is diffuse-only; this is not a convergence certificate.');
+    AppendMeasurement('CPU moving clips', 'Incremental / cold rebuilds byte-identical',
+        'Four numerical moves, including negative toroidal coordinates. GPU still refills all clip cells.');
+    AppendMeasurement('Pixel checks', 'Finite nonnegative radiance; expected dark controls exactly black',
+        'No automated guarantee of zero acne, banding, fireflies or other visual artifacts.');
+    AppendMeasurement('Full renderer / GPU / Windows / 60–120 FPS', 'NOT VERIFIED',
+        'No viewport, swapchain, hardware performance or frame-pacing acceptance.');
+
+    RetrieveControl('benchmark-json').textContent = JSON.stringify(Benchmark, null, 2);
+    RetrieveControl('vulkan-json').textContent = JSON.stringify(Vulkan, null, 2);
+    RetrieveControl('cache-read-summary').textContent =
+        `Vulkan: ${Vulkan.lit_gpu_cache_sites.toLocaleString()} lit cache sites; ` +
+        `${Vulkan.positive_gpu_cache_gathers.toLocaleString()} positive gathers. ` +
+        'Clearing the cache makes gathered RGB exactly zero. GPU motion keeps the local bake byte-identical.';
+    const BeforeRmse = Comparisons.Combined_outward_only_vs_finite_512.linear_rgb_rmse_full_image;
+    const AfterRmse = Comparisons.Combined_cache_corrected_vs_finite_512.linear_rgb_rmse_full_image;
+    RetrieveControl('cache-quality-summary').textContent =
+        'The emissive-only corrected/control images are identical in this camera. Combined GI full-image RMSE ' +
+        `versus the finite reference is ${BeforeRmse.toFixed(8)} → ${AfterRmse.toFixed(8)} ` +
+        (AfterRmse >= BeforeRmse ? '(slightly worse). No full-image quality improvement is established.' :
+            '(lower in this fixture only). This does not establish convergence or accepted visual quality.');
+}).catch(Failure =>
+{
+    RetrieveControl('load-status').textContent = 'Evidence load failed: ' + Failure.message +
+        '. Serve this directory over HTTP; do not treat unloaded checks as passing.';
+    RetrieveControl('load-status').className = 'error';
+});
+</script>
+</body>
+</html>

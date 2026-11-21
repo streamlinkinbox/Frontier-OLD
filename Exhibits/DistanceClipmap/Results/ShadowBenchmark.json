@@ -1,0 +1,19 @@
+{
+  "passed": true,
+  "rounds": 5,
+  "warmup_rounds": 1,
+  "threads": 2,
+  "width": 480,
+  "height": 270,
+  "primary_sites": 4,
+  "cap_samples_each_primary": 24,
+  "reference_paths_total_pixel": 96,
+  "selection6": "SDF reference direct only, one scattering site, 96 paths total per pixel",
+  "alternating_order": true,
+  "bit_identical_repeats": true,
+  "primary_cpu_ms": 369.685962,
+  "cold_distance_and_radiance_cpu_ms": 503.980238,
+  "timed_region": "transport image allocation and integration; excludes primary tracing, field/cache construction, hashing and file encoding",
+  "hardware_gpu_timing": false,
+  "renderer_accepted": false
+}

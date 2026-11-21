@@ -1,0 +1,8 @@
+Executed PointSdfShadow: direct 0, indirect 0
+Executed AnalyticSdfPenumbra: direct 0, indirect 0
+Executed VoxelSdfPenumbra: direct 0, indirect 0
+Executed VoxelSdfConeGi: direct 0, indirect 2.23517e-08
+Executed HybridSdfSphereCap: direct 0, indirect 0
+Executed ReferenceSdfPaths: direct 2.38419e-07, indirect 5.96046e-08
+Retained per-path diagnosis for pixel 36347
+Nine SDF shader entries completed with guarded readback

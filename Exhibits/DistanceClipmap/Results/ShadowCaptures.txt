@@ -1,0 +1,9 @@
+Constructed 786432 signed voxels and 83378 reflected sites
+Rendered path 0
+Rendered path 1
+Rendered path 2
+Rendered path 3
+Rendered path 4
+Rendered path 5
+Six complete source-off captures are exactly black
+SDF shadow render completed

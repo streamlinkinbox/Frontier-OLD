@@ -1,0 +1,9 @@
+Test project /home/user/Frontier-OLD/_ClaudeScratch/Build/Shadows
+    Start 1: SixSdfShadowNumeric
+1/2 Test #1: SixSdfShadowNumeric ..............   Passed    3.08 sec
+    Start 2: SixSdfShadowVulkan
+2/2 Test #2: SixSdfShadowVulkan ...............   Passed    7.62 sec
+
+100% tests passed out of 2
+
+Total Test time (real) =  10.70 sec

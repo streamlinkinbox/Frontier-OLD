@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Frontier · diffuse transport evidence</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,sans-serif;background:#10161f;color:#edf1f7}*{box-sizing:border-box}body{margin:0}main{max-width:1560px;margin:auto;padding:28px}h1{font-size:clamp(25px,4vw,40px);margin:12px 0}h2{font-size:23px;margin-top:34px}p{max-width:1050px;line-height:1.6;color:#b9c5d6}a{color:#83d6cc}header{border-bottom:1px solid #334256;padding-bottom:18px}.eyebrow{font-size:12px;letter-spacing:2px;color:#83d6cc}.rejected{border:1px solid #9c615b;background:#2b1d22;color:#ffc2b7;padding:13px 17px;border-radius:8px}.controls{display:flex;gap:14px;align-items:end;flex-wrap:wrap;margin:18px 0}label{font-size:13px;color:#b9c5d6;display:grid;gap:6px}select,button,input{font:inherit;color:#edf1f7;background:#1b2838;border:1px solid #455c78;border-radius:5px;padding:8px}button{cursor:pointer}input[type=checkbox]{width:18px;height:18px;accent-color:#83d6cc}label.toggle{display:flex;align-items:center;padding:9px 0}button:disabled,select:disabled{opacity:.45;cursor:default}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}figure{margin:0;background:#171f2b;border:1px solid #2d3e53;border-radius:7px;overflow:hidden}figcaption{min-height:49px;padding:10px 12px;font-size:13px;color:#b9c5d6}figure img{display:block;width:100%;height:auto;aspect-ratio:16/9;background:#000}figure a{display:block}small{color:#9baac0}.tag{color:#f1ac9c}.reference{margin-top:12px;max-width:480px}.reference[hidden]{display:none}.stats{display:flex;flex-wrap:wrap;gap:12px;margin:20px 0}.stat{min-width:180px;background:#182332;border:1px solid #31435b;border-radius:7px;padding:12px 16px}.stat strong{display:block;font-size:22px;margin-top:5px;color:#e2efe9}table{border-collapse:collapse;width:100%;font-size:14px}th,td{text-align:left;padding:10px;border-bottom:1px solid #324258}th{color:#a1b4ce;font-size:12px}.scroll{overflow:auto}.motion input{min-width:220px;flex:1}code{color:#c7d8ea}footer{border-top:1px solid #334256;margin-top:30px;padding:20px 0;font-size:13px;color:#9baac0}.links{display:flex;gap:16px;flex-wrap:wrap}.chart{max-width:1100px}.chart img{width:100%;height:auto;aspect-ratio:auto}.error{color:#ffada3}.loading{color:#a9bddd}@media(max-width:900px){main{padding:16px}.grid{grid-template-columns:1fr}.pair{grid-template-columns:1fr}.reference{max-width:none}.stats{gap:7px}.stat{flex:1;min-width:140px}th,td{padding:9px 6px;font-size:12px}}
+</style>
+</head>
+<body>
+<main>
+<header>
+<div class="eyebrow">FRONTIER / ISOLATED RADIANCE TRANSPORT</div>
+<h1>Cones and dynamic diffuse probes</h1>
+<p>Actual ControlVehicle geometry. Native <strong>480 × 270</strong>, four primary samples, linear Float32 radiance.
+No sky/fill, denoiser, temporal history, generated imagery or image-warped motion.</p>
+<div class="rejected"><strong>Experimental — renderer acceptance FAILS.</strong> Cone energy/detail loss and probe blotches remain.
+Smoothness is not physical accuracy. Finite references are still grainy. Nothing here replaces the editor renderer.</div>
+<p id="report-status" class="loading" role="status">Loading retained measurements…</p>
+<div class="links"><a href="Transport.md">Mechanisms, limitations and reproduction</a><a href="index.html">Earlier distance/cache audit</a><a href="Results/GiSummary.json">Float32 checks and measurements</a><a href="Results/GiIntegrity.json">Evidence integrity</a></div>
+</header>
+<div class="stats">
+<div class="stat">Native GI captures<strong id="capture-count">—</strong></div>
+<div class="stat">Directional radiance voxels<strong>3 × 64³ × 6</strong></div>
+<div class="stat">Diffuse probes<strong>5,775 × 512 rays</strong></div>
+<div class="stat">GPU execution<strong>SwiftShader CPU</strong></div>
+</div>
+<section aria-labelledby="isolation-title">
+<h2 id="isolation-title">Source isolation</h2>
+<p>GI-only images use the same disclosed <strong>×8 linear exposure</strong>; direct images use ×1. Reinhard followed by IEC sRGB.
+Primary emitter next-event lighting is not added twice to GI. Source-off is intentionally exact black.</p>
+<div class="controls">
+<label>Light selection<select id="source"><option value="Combined">All four sources</option><option value="Emissive">Vehicle emitters only</option><option value="Point">Point only</option><option value="Sun">Finite Sun only</option><option value="Area">Rectangle only</option><option value="Off">All sources off</option></select></label>
+<label>Secondary diffuse sites<select id="bounce"><option value="1">1 · reflected-direct cache</option><option value="2">2 · one Jacobi propagation</option><option value="4">4 · three Jacobi propagations</option></select></label>
+<label class="toggle"><input id="gpu" type="checkbox">Vulkan GI readbacks</label>
+</div>
+<div class="grid">
+<figure><a id="direct-link" href="Images/GiCombinedDirect.png"><img id="direct" src="Images/GiCombinedDirect.png" width="480" height="270" alt="Combined direct lighting"></a><figcaption>Common triangle-refined direct lighting · ×1</figcaption></figure>
+<figure><a id="cone-link" href="Images/GiCombinedCone.png"><img id="cone" src="Images/GiCombinedCone.png" width="480" height="270" alt="Directional voxel cone indirect lighting"></a><figcaption id="cone-caption">Directional voxel cone GI · CPU · ×8</figcaption></figure>
+<figure><a id="probe-link" href="Images/GiCombinedProbe.png"><img id="probe" src="Images/GiCombinedProbe.png" width="480" height="270" alt="Dynamic diffuse probe indirect lighting"></a><figcaption id="probe-caption">Distance-moment probe GI · CPU · ×8</figcaption></figure>
+</div>
+<p id="method-note">Six directional radiance lobes and ordered opacity mip reduction versus octahedral irradiance/distance-moment probes.
+Both are biased spatial/angular approximations.</p>
+<figure id="reference-box" class="reference"><a id="reference-link" href="Images/GiCombinedReference512.png"><img id="reference" src="Images/GiCombinedReference512.png" width="480" height="270" alt="Finite triangle indirect reference"></a><figcaption id="reference-caption">Finite triangle 512 directions · 1 secondary site · ×8 · not ground truth</figcaption></figure>
+</section>
+<section aria-labelledby="motion-title">
+<h2 id="motion-title">Actual moving vehicle — emitter-only GI</h2>
+<p>Twelve independently rendered rigid poses over four seconds. Both fields are refreshed for every pose.
+These are prerendered captures, <strong>not real-time playback performance</strong>, driving physics or pixel warps.</p>
+<div class="controls motion"><button id="play" type="button">Play</button><label>Pose<input id="pose" type="range" min="0" max="11" step="1" value="0"></label><span id="pose-label">Pose 0 / 11 · t = 0.000 s</span></div>
+<div class="pair">
+<figure><a id="motion-cone-link" href="Images/GiMotionConeLit00.png"><img id="motion-cone" src="Images/GiMotionConeLit00.png" width="480" height="270" alt="Actual moving vehicle with cone GI"></a><figcaption>Emitter direct + cone GI · ×1 · native pose</figcaption></figure>
+<figure><a id="motion-probe-link" href="Images/GiMotionProbeLit00.png"><img id="motion-probe" src="Images/GiMotionProbeLit00.png" width="480" height="270" alt="Actual moving vehicle with probe GI"></a><figcaption>Emitter direct + probe GI · ×1 · native pose</figcaption></figure>
+</div>
+<p><a href="Images/GiMotionCone.gif">Cone GIF</a> · <a href="Images/GiMotionProbe.gif">Probe GIF</a> · GIFs are palette derivatives.
+Individual PNGs and animated RGB PNGs are lossless display derivatives. The archive retains 58 static/reference/GPU Float32 buffers;
+all 48 motion PNGs and their raw-float hashes are retained, but motion Float32 payloads are reproducible rather than stored in Git.</p>
+</section>
+<section aria-labelledby="measure-title">
+<h2 id="measure-title">Quality and CPU timing — separate gates</h2>
+<p>Five alternating rounds on the same two-vCPU host, same sources, primary samples, matte materials and surface relight budget.
+Gather timings exclude primary visibility/direct/setup/encoding. Cold costs are in the report. The estimators do not produce equal images.</p>
+<div class="scroll"><table><thead><tr><th>GI method</th><th>Median gather</th><th>Linear RGB RMSE to finite 512</th><th>Better RMSE and faster?</th></tr></thead><tbody id="metrics"></tbody></table></div>
+<p>RMSE includes finite-reference error, not just algorithm bias. Image inspection remains a separate rejection gate, even if a metric improves.</p>
+<figure class="chart"><a href="Images/GiBenchmark.png"><img src="Images/GiBenchmark.png" width="1100" height="420" alt="Measured GI timing and finite-reference error chart"></a></figure>
+</section>
+<section>
+<h2>What ran on Vulkan</h2>
+<p>Eight Slang entries execute voxel injection, ordered mips, cone gather/propagation, probe convolution, distance moments and probe gather/propagation.
+The full 480 × 270 <em>GI images</em> are GPU readbacks. Geometry intersections, direct-source relighting and primary surface samples are CPU inputs.
+<strong>This is not a full GPU scene renderer, hardware-GPU benchmark, Windows/editor run or production-material integration.</strong></p>
+<div class="links"><a href="Results/GiVulkan.json">GPU numeric parity and ablations</a><a href="Results/GiVulkanCapture.json">GPU native GI image checks</a><a href="Results/GiNumeric.json">CPU consumption, revision and contraction checks</a><a href="Results/GiBenchmark.json">Raw timing rounds and cold costs</a><a href="Results/GiCombinedResiduals.json">Discrete iteration residuals</a></div>
+</section>
+<footer>Original checkpoint remains intact. New transport is isolated in <code>Experimental/DistanceClipmap/Transport/</code>.
+Reference captures are finitely sampled, not photographs or certified physical ground truth. Click any image for its native file.</footer>
+</main>
+<script>
+'use strict';
+const $ = Id => document.getElementById(Id);
+let Timer = null;
+function Picture(Id, Name) {
+  const Location = 'Images/' + Name + '.png';
+  $(Id).src = Location; $(Id + '-link').href = Location;
+}
+function SourceSelection() {
+  const Source = $('source').value;
+  const Extended = ['Combined', 'Emissive'].includes(Source);
+  if (!Extended) $('bounce').value = '1';
+  $('bounce').disabled = !Extended;
+  const Bounce = $('bounce').value;
+  const GpuEnabled = Extended && Bounce === '1';
+  $('gpu').disabled = !GpuEnabled;
+  if (!GpuEnabled) $('gpu').checked = false;
+  const Gpu = $('gpu').checked;
+  const Suffix = Bounce === '1' ? '' : Bounce;
+  Picture('direct', 'Gi' + Source + 'Direct');
+  for (const Method of ['Cone', 'Probe']) {
+    Picture(Method.toLowerCase(), 'Gi' + Source + (Gpu ? 'Gpu' : '') + Method + Suffix);
+    $(Method.toLowerCase() + '-caption').textContent = Method + ' GI · ' + (Gpu ? 'Vulkan readback' : 'CPU') + ' · ' + Bounce + ' secondary site(s) · ×8';
+  }
+  $('reference-box').hidden = !Extended;
+  if (Extended) {
+    const Reference = Bounce === '1' ? 'Reference512' : 'Reference2Sites512';
+    Picture('reference', 'Gi' + Source + Reference);
+    $('reference-caption').textContent = 'Finite triangle 512 · ' + (Bounce === '1' ? '1 secondary site' : '2 secondary sites') + ' · ×8 · not ground truth';
+  }
+  $('method-note').textContent = Bounce === '4' ?
+    'Four-site approximation shown; the displayed finite reference has only TWO secondary sites. These are not matched-depth error images. Residual bounds apply only to each discrete approximate operator.' :
+    'Biased spatial/angular approximations. Cones use an explicit 0.125 m normal offset / 0.25 m start; probes use 0.5 m spacing, 0.05 m bias and heuristic moment visibility. Neither is exact physical GI.';
+}
+function MotionSelection() {
+  const Index = Number($('pose').value), Numbering = String(Index).padStart(2, '0');
+  Picture('motion-cone', 'GiMotionConeLit' + Numbering);
+  Picture('motion-probe', 'GiMotionProbeLit' + Numbering);
+  $('pose-label').textContent = 'Pose ' + Index + ' / 11 · t = ' + (Index / 3).toFixed(3) + ' s';
+}
+function StopPlayback() { if (Timer !== null) clearInterval(Timer); Timer = null; $('play').textContent = 'Play'; }
+$('source').addEventListener('change', SourceSelection);
+$('bounce').addEventListener('change', SourceSelection);
+$('gpu').addEventListener('change', SourceSelection);
+$('pose').addEventListener('input', MotionSelection);
+$('play').addEventListener('click', () => {
+  if (Timer !== null) return StopPlayback();
+  $('play').textContent = 'Pause';
+  Timer = setInterval(() => { $('pose').value = String((Number($('pose').value) + 1) % 12); MotionSelection(); }, 1000 / 3);
+});
+document.addEventListener('visibilitychange', () => { if (document.hidden) StopPlayback(); });
+SourceSelection(); MotionSelection();
+fetch('Results/GiSummary.json').then(Response => {
+  if (!Response.ok) throw new Error('Measurement report HTTP ' + Response.status);
+  return Response.json();
+}).then(Report => {
+  if (Report.passed !== true || Report.renderer_accepted !== false || !Array.isArray(Report.checks)) throw new Error('Missing successful inspection/rejection fields');
+  $('capture-count').textContent = String(Report.native_captures);
+  $('report-status').textContent = Report.native_captures + ' retained native captures · CPU/Vulkan integrity checks are not visual acceptance.';
+  for (const [Name, Entry] of Object.entries(Report.benchmark.methods)) {
+    const Row = document.createElement('tr');
+    const Gate = Name === 'TriangleCache128' ? 'Baseline' : Report.combined_rmse_and_steady_gather_speed_gates[Name] ? 'Metric only; visually rejected' : 'FAIL';
+    for (const Content of [Name, Entry.median_gather_ms.toFixed(2) + ' ms', Entry.linear_rgb_rmse.toFixed(7), Gate]) {
+      const Cell = document.createElement('td'); Cell.textContent = Content; Row.appendChild(Cell);
+    }
+    $('metrics').appendChild(Row);
+  }
+}).catch(Failure => { $('report-status').className = 'error'; $('report-status').textContent = 'Measurements unavailable: ' + Failure.message + '. No substitute numbers shown.'; });
+</script>
+</body>
+</html>

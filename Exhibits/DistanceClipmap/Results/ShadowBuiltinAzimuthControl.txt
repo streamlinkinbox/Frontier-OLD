@@ -1,0 +1,8 @@
+Executed PointSdfShadow: direct 1.78814e-05, indirect 0
+Executed AnalyticSdfPenumbra: direct 1.78814e-05, indirect 0
+Executed VoxelSdfPenumbra: direct 1.78814e-05, indirect 0
+Executed VoxelSdfConeGi: direct 1.78814e-05, indirect 2.23517e-08
+Executed HybridSdfSphereCap: direct 1.78814e-05, indirect 0
+Executed ReferenceSdfPaths: direct 1.74046e-05, indirect 0.00973027
+Retained per-path diagnosis for pixel 36347
+SDF Vulkan failure: Six-path Float32 CPU / Vulkan parity exceeded declared tolerance

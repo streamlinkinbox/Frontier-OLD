@@ -1,0 +1,105 @@
+<!doctype html>
+<!-- 🧩 Viewer for actual native C++ captures, matched lighting decomposition and bounded software-Vulkan checks; not an editor. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Six SDF renders · Frontier</title>
+<style>
+:root{color-scheme:dark;--Canvas:#0b1017;--Panel:#131c27;--Line:#2c3b4c;--Text:#e9ede7;--Muted:#a9b8c9;--Accent:#9ee3c5}
+*{box-sizing:border-box}body{margin:0;background:var(--Canvas);color:var(--Text);font:15px/1.55 ui-sans-serif,system-ui,sans-serif}
+a{color:var(--Accent);text-underline-offset:4px}button,select{font:inherit;color:inherit;background:#192633;border:1px solid var(--Line);border-radius:7px;padding:7px 12px}button{cursor:pointer}button[aria-pressed=true]{border-color:var(--Accent);color:var(--Accent);background:#203a35}button:focus-visible,a:focus-visible,select:focus-visible{outline:2px solid var(--Accent);outline-offset:4px}header,main,footer{max-width:1544px;margin:auto;padding:25px 28px}header{padding-bottom:12px}h1{font-size:clamp(27px,4vw,45px);line-height:1.15;letter-spacing:-.025em;margin:9px 0 14px}h2{font-size:23px;margin:0 0 10px}h3{font-size:14px;font-weight:600;line-height:1.4;margin:0}.Kicker{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--Accent)}.Muted,figcaption{color:var(--Muted)}p{margin:8px 0 13px}.Status{border:1px solid var(--Line);border-left:3px solid var(--Accent);padding:12px 16px;border-radius:7px;background:#111d25;margin:18px 0}.Error{border-color:#ec9b91;color:#f7c9c1;background:#331b20}nav,.Controls{display:flex;gap:9px;flex-wrap:wrap;align-items:center}.Controls{margin:16px 0}.Grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.Card{margin:0;border:1px solid var(--Line);border-radius:8px;background:var(--Panel);overflow:hidden}.Card header{padding:10px 12px;min-height:60px}.Card img{display:block;width:100%;height:auto;aspect-ratio:16/9;background:#000;image-rendering:auto}.Card figcaption{padding:9px 12px;font-size:12px}.Tag{font:12px ui-monospace,monospace;color:var(--Accent);padding-right:7px}section{margin:8px 0 37px}.Note{font-size:13px;color:#ddc29b}table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--Line)}th{color:var(--Accent);font-weight:600}.TableScroll{overflow:auto;border:1px solid var(--Line);border-radius:8px}.Wide{width:100%;height:auto;border:1px solid var(--Line);border-radius:8px}.Checks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.Check{background:var(--Panel);border:1px solid var(--Line);padding:14px;border-radius:8px}.Check strong{display:block;font-size:21px;color:var(--Accent)}.Check span{font-size:12px;color:var(--Muted)}.Motion{display:grid;grid-template-columns:1.5fr 1fr;gap:20px}.Motion img{width:100%;height:auto;background:#000;border:1px solid var(--Line);border-radius:8px}.Motion aside{align-self:center}details{margin:10px 0 24px}summary{cursor:pointer;color:var(--Accent);padding:8px 0}footer{font-size:13px;color:var(--Muted);border-top:1px solid var(--Line)}[hidden]{display:none!important}@media(max-width:1080px){.Grid{grid-template-columns:repeat(2,minmax(0,1fr))}.Checks{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:650px){header,main,footer{padding:20px 14px}.Grid,.Motion{grid-template-columns:1fr}.Card header{min-height:0}h1{font-size:31px}.Controls{gap:7px}button{font-size:13px;padding:7px 9px}.Checks{gap:8px}th,td{padding:8px}.Note{font-size:12px}}
+</style>
+</head>
+<body>
+<header>
+<div class="Kicker">Frontier / distance-field comparison</div>
+<h1>Six paths. Actual renders.</h1>
+<p class="Muted">One emissive sphere. The same camera, geometry and exposure. Every image below comes from the native C++ renderer—not an illustration, browser shader or editor screenshot.</p>
+<nav aria-label="Evidence downloads"><a href="Images/ShadowSixRenders.png">Full six-render sheet</a><span aria-hidden="true">·</span><a href="Images/Proof11SixSdfRenderers.png">Proof 11 banner sheet</a><span aria-hidden="true">·</span><a href="Results/ShadowSixRenders.zip" download>Download all six PNGs</a><span aria-hidden="true">·</span><a href="SixRenders.md">Methods & reproduction</a><span aria-hidden="true">·</span><a href="Results/ShadowIntegrity.json">Verification report</a></nav>
+<div id="Status" class="Status" role="status">Loading capture integrity…</div>
+</header>
+<main>
+<section aria-labelledby="ComparisonTitle">
+<h2 id="ComparisonTitle">The six requested paths</h2>
+<p class="Muted">Native 480 × 270 each · Float32 transport · exposure 1 · Reinhard → sRGB · no Sun, sky, ambient fill or denoising.</p>
+<div class="Controls" role="group" aria-label="Lighting decomposition">
+<button type="button" data-view="Combined" aria-pressed="true">Complete output</button>
+<button type="button" data-view="Direct" aria-pressed="false">Shadows / direct only</button>
+<button type="button" data-view="Indirect" aria-pressed="false">GI only</button>
+<button type="button" data-view="Visibility" aria-pressed="false">Visibility debug</button>
+<button type="button" data-view="Off" aria-pressed="false">Sphere off</button>
+</div>
+<p id="ViewNote" class="Note">Paths 0 / 1 / 2 / 4 intentionally contain direct lighting only. Path 3 adds one cone-GI bounce; path 5 reaches four scattering sites.</p>
+<div id="Grid" class="Grid"></div>
+</section>
+<section aria-labelledby="DecompositionTitle">
+<h2 id="DecompositionTitle">GI is not a better shadow filter</h2>
+<p class="Muted">Path 3’s shadow component is bit-identical to path 2. Its added GI is compared to the reference’s <strong>first</strong> indirect bounce—not its deeper, brighter full image.</p>
+<a href="Images/ShadowDecomposition.png"><img class="Wide" src="Images/ShadowDecomposition.png" alt="Native path 3 direct, GI and combined outputs with matched two-site SDF reference decomposition" width="1488" height="737" loading="lazy"></a>
+</section>
+<section aria-labelledby="MetricsTitle">
+<h2 id="MetricsTitle">Measured—not copied from the reference picture</h2>
+<p class="Muted">Linear Float32 differences against finite 96-spp SDF direct lighting. Lower RMSE is closer to this noisy finite reference, not a claim of physical truth.</p>
+<div class="TableScroll"><table><thead><tr><th>Path</th><th>Direct RGB RMSE</th><th>Floor RMSE</th><th>Median CPU transport</th></tr></thead><tbody id="Metrics"></tbody></table></div>
+<p class="Note">Five alternating rounds after warmup, two CPU threads. Setup, primary tracing and PNG encoding excluded. Lighting scopes differ; these are not hardware-GPU timings or a production replacement gate.</p>
+<details><summary>Native direct-difference maps ×8</summary><img class="Wide" src="Images/ShadowDirectErrors.png" alt="Direct-light absolute RGB differences amplified eight times" loading="lazy"></details>
+<details><summary>Repeated CPU timings and calibrated penumbra profiles</summary><img class="Wide" src="Images/ShadowTimings.png" alt="Measured five-round median CPU integration times" loading="lazy"><img class="Wide" src="Images/ShadowProfiles.png" alt="Measured 1024-direction finite sphere penumbra profiles at four receiver distances" loading="lazy"></details>
+</section>
+<section aria-labelledby="MotionTitle">
+<h2 id="MotionTitle">Also checked: the actual moving ControlVehicle</h2>
+<div class="Motion"><div><img id="Vehicle" src="Images/ShadowVehicle0Combined.png" alt="Actual ControlVehicle native pose zero with sphere-only direct and cone-GI lighting" width="480" height="270" loading="lazy"></div><aside>
+<p>All 25,068 archived facets—not a primitive stand-in. Six rigid poses move both the vehicle and the sphere. Native images match fresh resets exactly.</p>
+<label for="Pose">Actual captured pose</label> <select id="Pose"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select>
+<div class="Controls"><button id="Animate" type="button" aria-pressed="false">Play captured poses</button><a href="Images/ShadowVehicleMotion.png">All six poses</a></div>
+<p class="Note">Companion only: unsigned 80 × 40 × 32 bake, toroidal distance skips and original triangles for contact. It is not an analytic signed vehicle or a driving-physics / real-time test. No hidden vehicle emitters.</p>
+</aside></div>
+</section>
+<section aria-labelledby="ChecksTitle">
+<h2 id="ChecksTitle">Execution checks</h2><div id="Checks" class="Checks"></div>
+<details><summary>Signed fields, normals and visibility diagnostics</summary><img class="Wide" src="Images/ShadowDebug.png" alt="Actual analytic and voxel signed distance slices, shared normals and native visibility outputs" loading="lazy"></details>
+<p class="Note">SDF hit tolerance 0.4 mm; origin offset 2 mm. Four shared primary positions × 24 paths = 96 total paths per pixel. PT has a four-site depth limit and visible finite-sample noise. Voxel corner/contact errors and cone detail loss remain visible. Windows/editor, physical GPU and 60/120 Hz pacing remain unverified.</p>
+</section>
+</main>
+<footer>Native C++ CPU captures + bounded Slang/Vulkan parity on SwiftShader (CPU device). Integrity is not production quality acceptance. The original supplied picture remains separately labelled in <a href="ShadowPaths.md">the request contract</a>.</footer>
+<script>
+'use strict';
+const Labels=['Point-sample SDF (no penumbra)','Analytic SDF cone penumbra','3D voxel SDF clipmap penumbra','3D voxel SDF penumbra + cone GI','Hybrid SDF + Sobol spherical cap','SDF Monte Carlo PT ref (96 spp)'];
+const Grid=document.getElementById('Grid');
+let CurrentView='Combined',Playing=false,Timer=null;
+for(let Mode=0;Mode<6;Mode++){
+    const Card=document.createElement('figure');Card.className='Card';
+    const Header=document.createElement('header'),Title=document.createElement('h3');Title.textContent=Mode+'. '+Labels[Mode];Header.append(Title);
+    const Link=document.createElement('a'),Picture=document.createElement('img');Picture.width=480;Picture.height=270;Picture.dataset.mode=String(Mode);Picture.alt=Labels[Mode]+' native complete output';
+    Link.append(Picture);const Caption=document.createElement('figcaption');Caption.textContent=(Mode===3?'Voxel direct + one reflected cone bounce':Mode===5?'96 total SDF paths / pixel, up to four sites':'Direct only, no hidden GI')+' · 480 × 270';
+    Card.append(Header,Link,Caption);Grid.append(Card);
+}
+function SelectView(View){
+    CurrentView=View;
+    for(const Picture of Grid.querySelectorAll('img')){const Path='Images/Shadow'+Picture.dataset.mode+View+'.png';Picture.src=Path;Picture.parentElement.href=Path;Picture.alt=Labels[Number(Picture.dataset.mode)]+' native '+View+' capture';}
+    for(const Button of document.querySelectorAll('[data-view]'))Button.setAttribute('aria-pressed',String(Button.dataset.view===View));
+    const Notes={Combined:'Paths 0 / 1 / 2 / 4 intentionally contain direct lighting only. Path 3 adds one cone-GI bounce; path 5 reaches four scattering sites.',Direct:'Matched direct-only comparison. Path 3 and path 2 must be identical; added GI cannot improve this result.',Indirect:'Only paths 3 and 5 include GI. Other paths are exactly black by construction. Path 5 includes up to three secondary sites.',Visibility:'Debug only: point / cone visibility or 96 unweighted cap tests per pixel. Not radiance; no GI is included.',Off:'Every source disabled: all six full-resolution native outputs are exactly black. Reflected cache was refreshed, not hidden by an overlay.'};
+    document.getElementById('ViewNote').textContent=Notes[View];
+}
+for(const Button of document.querySelectorAll('[data-view]'))Button.addEventListener('click',()=>SelectView(Button.dataset.view));
+SelectView(CurrentView);
+function StopAnimation(){Playing=false;if(Timer!==null)clearInterval(Timer);Timer=null;document.getElementById('Animate').setAttribute('aria-pressed','false');document.getElementById('Animate').textContent='Play captured poses';}
+function SelectPose(){const Pose=document.getElementById('Pose').value;const Picture=document.getElementById('Vehicle');Picture.src='Images/ShadowVehicle'+Pose+'Combined.png';Picture.alt='Actual ControlVehicle native pose '+Pose+' / sphere only';}
+document.getElementById('Pose').addEventListener('change',()=>{StopAnimation();SelectPose();});
+document.getElementById('Animate').addEventListener('click',()=>{if(Playing){StopAnimation();return;}Playing=true;const Button=document.getElementById('Animate');Button.textContent='Pause captured poses';Button.setAttribute('aria-pressed','true');Timer=setInterval(()=>{const Select=document.getElementById('Pose');Select.value=String((Number(Select.value)+1)%6);SelectPose();},500);});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)StopAnimation();});
+const Reduced=matchMedia('(prefers-reduced-motion: reduce)');Reduced.addEventListener('change',()=>{if(Reduced.matches)StopAnimation();});
+async function LoadReport(Path){const Response=await fetch(Path,{cache:'no-store'});if(!Response.ok)throw new Error(Path+' returned '+Response.status);const Report=await Response.json();if(Report.passed!==true)throw new Error(Path+' did not pass validation');return Report;}
+(async()=>{try{
+    const [Summary,Integrity]=await Promise.all([LoadReport('Results/ShadowSummary.json'),LoadReport('Results/ShadowIntegrity.json')]);
+    if(Summary.renderer_accepted!==false||Integrity.renderer_accepted!==false||Summary.new_native_shadow_paths_executed!==6)throw new Error('Unverified production acceptance or incomplete paths');
+    const Status=document.getElementById('Status');Status.textContent='6 / 6 native paths rendered · integrity verified · production replacement NOT accepted';
+    const Body=document.getElementById('Metrics');
+    for(let Mode=0;Mode<6;Mode++){const Row=document.createElement('tr'),Metric=Summary.comparisons.direct_to_finite_96[String(Mode)],Timing=Summary.benchmark.methods[String(Mode)];for(const Text of [Mode+'. '+Labels[Mode],Metric.linear_rgb_rmse_all.toFixed(7),Metric.linear_rgb_rmse_floor.toFixed(7),Timing.median_cpu_ms.toFixed(1)+' ms']){const Cell=document.createElement('td');Cell.textContent=Text;Row.append(Cell);}Body.append(Row);}
+    const Checks=[['6 / 6','native requested rendering paths'],[Summary.native_captures+'','native 480 × 270 captures'],[Integrity.footprints.length+'','executed and reflected shader entries'],['0','source-off nonzero pixels']];
+    for(const [Count,Text]of Checks){const Card=document.createElement('div');Card.className='Check';const Number=document.createElement('strong'),Description=document.createElement('span');Number.textContent=Count;Description.textContent=Text;Card.append(Number,Description);document.getElementById('Checks').append(Card);}
+}catch(Failure){const Status=document.getElementById('Status');Status.classList.add('Error');Status.setAttribute('role','alert');Status.textContent='Evidence could not be verified: '+Failure.message+'. Captures may be stale; no passing claim is available.';}})();
+</script>
+</body>
+</html>

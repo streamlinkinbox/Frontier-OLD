@@ -1,0 +1,58 @@
+{
+  "passed": true,
+  "paths_rendered": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "width": 480,
+  "height": 270,
+  "native_captures": 40,
+  "primary_sites": 4,
+  "paths_per_primary_site_reference": 24,
+  "paths_total_per_pixel_reference": 96,
+  "nee_samples_each_path_site": 1,
+  "max_scattering_sites_reference": 4,
+  "sphere_center_radius_m": [
+    -2.45000004768,
+    1.60000002384,
+    0.72000002861,
+    0.430000007153
+  ],
+  "sphere_radiance_rgb": [
+    35,
+    30,
+    21
+  ],
+  "other_sources": 0,
+  "source_off_black_pixels": 777600,
+  "shadow_step_limit": 256,
+  "hit_tolerance_m": 0.0004,
+  "surface_offset_m": 0.002,
+  "shadow_grid_extent": [
+    64,
+    64,
+    64
+  ],
+  "shadow_cell_widths_m": [
+    0.0625,
+    0.125,
+    0.25
+  ],
+  "radiance_cell_widths_m": [
+    0.125,
+    0.25,
+    0.5
+  ],
+  "radiance_mips_each_level": 7,
+  "radiance_cones": 16,
+  "cone_normal_offset_m": 0.16,
+  "cone_initial_travel_m": 0.125,
+  "scene_input_fnv1a64": "3990250324657093347",
+  "float32_transport": true,
+  "native_cpp_cpu_captures": true,
+  "renderer_accepted": false
+}

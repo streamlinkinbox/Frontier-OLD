@@ -1,0 +1,7 @@
+Actual ControlVehicle / moving sphere pose 0 exact against fresh native image
+Actual ControlVehicle / moving sphere pose 1 exact against fresh native image
+Actual ControlVehicle / moving sphere pose 2 exact against fresh native image
+Actual ControlVehicle / moving sphere pose 3 exact against fresh native image
+Actual ControlVehicle / moving sphere pose 4 exact against fresh native image
+Actual ControlVehicle / moving sphere pose 5 exact against fresh native image
+Sphere-only actual vehicle capture / motion checks completed

@@ -1,0 +1,19 @@
+{
+  "passed": true,
+  "requested_paths": 6,
+  "image_ids": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "user_image_bytes_verified": true,
+  "pinned_sources": 2,
+  "negative_controls_rejected": 3,
+  "document_links_verified": true,
+  "new_native_shadow_paths_executed": 0,
+  "renderer_accepted": false,
+  "scope": "Request/reference/source consistency only; not compilation, shadow execution, image quality or performance."
+}

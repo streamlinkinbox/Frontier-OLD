@@ -1,0 +1,2 @@
+Constructed 786432 signed voxels and 83378 reflected sites
+SDF shadow validate completed

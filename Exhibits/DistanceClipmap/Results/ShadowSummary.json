@@ -1,0 +1,1877 @@
+{
+  "passed": true,
+  "new_native_shadow_paths_executed": 6,
+  "renderer_accepted": false,
+  "scope": "Actual native C++ CPU renders; bounded Slang/Vulkan parity on SwiftShader CPU, not Windows/editor or physical-GPU acceptance.",
+  "labels": [
+    "Point-sample SDF (no penumbra)",
+    "Analytic SDF cone penumbra",
+    "3D voxel SDF clipmap penumbra",
+    "3D voxel SDF penumbra + cone GI",
+    "Hybrid SDF + Sobol spherical cap",
+    "SDF Monte Carlo PT ref (96 spp)"
+  ],
+  "tested_base_revision": "4cab9133ef01022019f0bf4c71b9b328791306bd",
+  "working_tree_sources_hashed": true,
+  "platform": "Linux-6.1.158+-x86_64-with-glibc2.36",
+  "python": "3.11.2",
+  "compiler": "c++ (Debian 12.2.0-14+deb12u1) 12.2.0",
+  "native_captures": 61,
+  "derived_captures": 7,
+  "unique_lossless_float_buffers": 27,
+  "motion_float_payloads_omitted": 15,
+  "native_float_captures_retained_or_aliased": 46,
+  "checks": [
+    {
+      "name": "Shadow0Direct",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 35.0,
+      "mean": 0.5008283657547145,
+      "zero_rgb_pixels": 36313,
+      "float32_rgb_sha256": "99ca71739b3f6f6c567ee2de5a2b570dbd671302858a725f6371e440def9aac8",
+      "float_buffer": "Buffers/Shadow0Direct.f32.zlib",
+      "buffer_sha256": "09c8cdb63cb2ca30a5ce75b77d68b37bc93adb0985a1f24b7c9fe2ef71ad2996",
+      "png_sha256": "f52abfdee02f77ccd82c9d800c245b509194fa1b13c9c12343c3f9d9aa0fa060"
+    },
+    {
+      "name": "Shadow0Indirect",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 0.0,
+      "mean": 0.0,
+      "zero_rgb_pixels": 129600,
+      "float32_rgb_sha256": "2e842802bccef91cabd2671b83639739256aa5cda053b8f72b52d63c433a700c",
+      "float_buffer": "Buffers/Shadow0Indirect.f32.zlib",
+      "buffer_sha256": "2197c417c693580cc357fb330a9fa8f7e6314c1e65c4c085f1b21c39db2530c3",
+      "png_sha256": "c22a7d202b5d11d5fe9335991aa704f7858fdd62281506e41f209931577dc8a7"
+    },
+    {
+      "name": "Shadow0OneBounce",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 0.0,
+      "mean": 0.0,
+      "zero_rgb_pixels": 129600,
+      "float32_rgb_sha256": "2e842802bccef91cabd2671b83639739256aa5cda053b8f72b52d63c433a700c",
+      "float_buffer": "Buffers/Shadow0Indirect.f32.zlib",
+      "buffer_sha256": "2197c417c693580cc357fb330a9fa8f7e6314c1e65c4c085f1b21c39db2530c3",
+      "png_sha256": "c22a7d202b5d11d5fe9335991aa704f7858fdd62281506e41f209931577dc8a7"
+    },
+    {
+      "name": "Shadow0Combined",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 35.0,
+      "mean": 0.5008283657547145,
+      "zero_rgb_pixels": 36313,
+      "float32_rgb_sha256": "99ca71739b3f6f6c567ee2de5a2b570dbd671302858a725f6371e440def9aac8",
+      "float_buffer": "Buffers/Shadow0Direct.f32.zlib",
+      "buffer_sha256": "09c8cdb63cb2ca30a5ce75b77d68b37bc93adb0985a1f24b7c9fe2ef71ad2996",
+      "png_sha256": "f52abfdee02f77ccd82c9d800c245b509194fa1b13c9c12343c3f9d9aa0fa060"
+    },
+    {
+      "name": "Shadow0Visibility",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "mean": 0.7001234567901234,
+      "zero_rgb_pixels": 37797,
+      "float32_rgb_sha256": "389bf7cafdf27180e7ff667c77dc46df000732d8430ffd91c29efd2fdab9d8b5",
+      "float_buffer": "Buffers/Shadow0Visibility.f32.zlib",
+      "buffer_sha256": "f03236c3341fb6c57a272dc0b2fb1de1318cf7b2a1fab423702ff8a7671dbfe4",
+      "png_sha256": "3651eb83c75ea3df3eb794c3c739e392d3417f9e028ba84144008254e11ea270"
+    },
+    {
+      "name": "Shadow0Off",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 0.0,
+      "mean": 0.0,
+      "zero_rgb_pixels": 129600,
+      "float32_rgb_sha256": "2e842802bccef91cabd2671b83639739256aa5cda053b8f72b52d63c433a700c",
+      "float_buffer": "Buffers/Shadow0Indirect.f32.zlib",
+      "buffer_sha256": "2197c417c693580cc357fb330a9fa8f7e6314c1e65c4c085f1b21c39db2530c3",
+      "png_sha256": "c22a7d202b5d11d5fe9335991aa704f7858fdd62281506e41f209931577dc8a7"
+    },
+    {
+      "name": "Shadow1Direct",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 35.0,
+      "mean": 0.4997480823065813,
+      "zero_rgb_pixels": 36308,
+      "float32_rgb_sha256": "dfa3344ce7b1bbf013a1a655b6d5614e1ea596fc9eefa6e13b4cfc8b49aa726a",
+      "float_buffer": "Buffers/Shadow1Direct.f32.zlib",
+      "buffer_sha256": "c2271c0943298cc5ce475a793b3879e34e7d6bfe9a862e5ef09d6abf9f9cfd5a",
+      "png_sha256": "80f2547975d3405dd92521d95c9c568d9556bad1c567b579863dea526f39a6e0"
+    },
+    {
+      "name": "Shadow1Indirect",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 0.0,
+      "mean": 0.0,
+      "zero_rgb_pixels": 129600,
+      "float32_rgb_sha256": "2e842802bccef91cabd2671b83639739256aa5cda053b8f72b52d63c433a700c",
+      "float_buffer": "Buffers/Shadow0Indirect.f32.zlib",
+      "buffer_sha256": "2197c417c693580cc357fb330a9fa8f7e6314c1e65c4c085f1b21c39db2530c3",
+      "png_sha256": "c22a7d202b5d11d5fe9335991aa704f7858fdd62281506e41f209931577dc8a7"
+    },
+    {
+      "name": "Shadow1OneBounce",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 0.0,
+      "mean": 0.0,
+      "zero_rgb_pixels": 129600,
+      "float32_rgb_sha256": "2e842802bccef91cabd2671b83639739256aa5cda053b8f72b52d63c433a700c",
+      "float_buffer": "Buffers/Shadow0Indirect.f32.zlib",
+      "buffer_sha256": "2197c417c693580cc357fb330a9fa8f7e6314c1e65c4c085f1b21c39db2530c3",
+      "png_sha256": "c22a7d202b5d11d5fe9335991aa704f7858fdd62281506e41f209931577dc8a7"
+    },
+    {
+      "name": "Shadow1Combined",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 35.0,
+      "mean": 0.4997480823065813,
+      "zero_rgb_pixels": 36308,
+      "float32_rgb_sha256": "dfa3344ce7b1bbf013a1a655b6d5614e1ea596fc9eefa6e13b4cfc8b49aa726a",
+      "float_buffer": "Buffers/Shadow1Direct.f32.zlib",
+      "buffer_sha256": "c2271c0943298cc5ce475a793b3879e34e7d6bfe9a862e5ef09d6abf9f9cfd5a",
+      "png_sha256": "80f2547975d3405dd92521d95c9c568d9556bad1c567b579863dea526f39a6e0"
+    },
+    {
+      "name": "Shadow1Visibility",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "mean": 0.6561639319087664,
+      "zero_rgb_pixels": 37792,
+      "float32_rgb_sha256": "62b945221167774e6b6645b99388e4a6605729946cd992feafe6a2b17dc0bfd9",
+      "float_buffer": "Buffers/Shadow1Visibility.f32.zlib",
+      "buffer_sha256": "ae4884aa313df764265642ab18be763154554643cc3c12be5434f8ba1b3848ca",
+      "png_sha256": "4754ace13186b29ba008a8d6c9c9c13e3660b463ff103dcf9f6653d165cb2b89"
+    },
+    {
+      "name": "Shadow1Off",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 0.0,
+      "mean": 0.0,
+      "zero_rgb_pixels": 129600,
+      "float32_rgb_sha256": "2e842802bccef91cabd2671b83639739256aa5cda053b8f72b52d63c433a700c",
+      "float_buffer": "Buffers/Shadow0Indirect.f32.zlib",
+      "buffer_sha256": "2197c417c693580cc357fb330a9fa8f7e6314c1e65c4c085f1b21c39db2530c3",
+      "png_sha256": "c22a7d202b5d11d5fe9335991aa704f7858fdd62281506e41f209931577dc8a7"
+    },
+    {
+      "name": "Shadow2Direct",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 35.0,
+      "mean": 0.4968813204210732,
+      "zero_rgb_pixels": 37342,
+      "float32_rgb_sha256": "d19ae6c9695120811ac9778b118b5f4b4eca5d0f0f515d53eef4b2c9c191b509",
+      "float_buffer": "Buffers/Shadow2Direct.f32.zlib",
+      "buffer_sha256": "35b3600865c977ed7e3938b64e49384606e6a18381ff28342a23e086183e4b0f",
+      "png_sha256": "386cf55c042f1ee28dbb571e2517aac74b3191324e7201c635e1d10b2f876601"
+    },
+    {
+      "name": "Shadow2Indirect",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 0.0,
+      "mean": 0.0,
+      "zero_rgb_pixels": 129600,
+      "float32_rgb_sha256": "2e842802bccef91cabd2671b83639739256aa5cda053b8f72b52d63c433a700c",
+      "float_buffer": "Buffers/Shadow0Indirect.f32.zlib",
+      "buffer_sha256": "2197c417c693580cc357fb330a9fa8f7e6314c1e65c4c085f1b21c39db2530c3",
+      "png_sha256": "c22a7d202b5d11d5fe9335991aa704f7858fdd62281506e41f209931577dc8a7"
+    },
+    {
+      "name": "Shadow2OneBounce",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 0.0,
+      "mean": 0.0,
+      "zero_rgb_pixels": 129600,
+      "float32_rgb_sha256": "2e842802bccef91cabd2671b83639739256aa5cda053b8f72b52d63c433a700c",
+      "float_buffer": "Buffers/Shadow0Indirect.f32.zlib",
+      "buffer_sha256": "2197c417c693580cc357fb330a9fa8f7e6314c1e65c4c085f1b21c39db2530c3",
+      "png_sha256": "c22a7d202b5d11d5fe9335991aa704f7858fdd62281506e41f209931577dc8a7"
+    },
+    {
+      "name": "Shadow2Combined",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 35.0,
+      "mean": 0.4968813204210732,
+      "zero_rgb_pixels": 37342,
+      "float32_rgb_sha256": "d19ae6c9695120811ac9778b118b5f4b4eca5d0f0f515d53eef4b2c9c191b509",
+      "float_buffer": "Buffers/Shadow2Direct.f32.zlib",
+      "buffer_sha256": "35b3600865c977ed7e3938b64e49384606e6a18381ff28342a23e086183e4b0f",
+      "png_sha256": "386cf55c042f1ee28dbb571e2517aac74b3191324e7201c635e1d10b2f876601"
+    },
+    {
+      "name": "Shadow2Visibility",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "mean": 0.645003756366752,
+      "zero_rgb_pixels": 38641,
+      "float32_rgb_sha256": "f45583c04c5e68e0b666da170d6a5cbea4d4df5b797a0e2d9adae5563161d615",
+      "float_buffer": "Buffers/Shadow2Visibility.f32.zlib",
+      "buffer_sha256": "86d794a03da2fff018972fcbaafbbc6f3b310fad118b63c88a08b22c1fc982db",
+      "png_sha256": "b58ca147616ebd238326f0c1f2904c0b7803659db2b7ec854de031eaccf43c4d"
+    },
+    {
+      "name": "Shadow2Off",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 0.0,
+      "mean": 0.0,
+      "zero_rgb_pixels": 129600,
+      "float32_rgb_sha256": "2e842802bccef91cabd2671b83639739256aa5cda053b8f72b52d63c433a700c",
+      "float_buffer": "Buffers/Shadow0Indirect.f32.zlib",
+      "buffer_sha256": "2197c417c693580cc357fb330a9fa8f7e6314c1e65c4c085f1b21c39db2530c3",
+      "png_sha256": "c22a7d202b5d11d5fe9335991aa704f7858fdd62281506e41f209931577dc8a7"
+    },
+    {
+      "name": "Shadow3Direct",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 35.0,
+      "mean": 0.4968813204210732,
+      "zero_rgb_pixels": 37342,
+      "float32_rgb_sha256": "d19ae6c9695120811ac9778b118b5f4b4eca5d0f0f515d53eef4b2c9c191b509",
+      "float_buffer": "Buffers/Shadow2Direct.f32.zlib",
+      "buffer_sha256": "35b3600865c977ed7e3938b64e49384606e6a18381ff28342a23e086183e4b0f",
+      "png_sha256": "386cf55c042f1ee28dbb571e2517aac74b3191324e7201c635e1d10b2f876601"
+    },
+    {
+      "name": "Shadow3Indirect",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 0.23331402242183685,
+      "mean": 0.011703499840040101,
+      "zero_rgb_pixels": 6874,
+      "float32_rgb_sha256": "b18825f81e721ab7e64466d79f387098da925b5686b958d9e4abc690b9f32e24",
+      "float_buffer": "Buffers/Shadow3Indirect.f32.zlib",
+      "buffer_sha256": "dbdf1e1a48a264d05bd595cd645afa7bce3bdcbe81f9e70fea198902b75da607",
+      "png_sha256": "e3f1beb62812d9fa58130f0b47c6a077167e7775ae1841708bbad3a35c6362d4"
+    },
+    {
+      "name": "Shadow3OneBounce",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 0.23331402242183685,
+      "mean": 0.011703499840040101,
+      "zero_rgb_pixels": 6874,
+      "float32_rgb_sha256": "b18825f81e721ab7e64466d79f387098da925b5686b958d9e4abc690b9f32e24",
+      "float_buffer": "Buffers/Shadow3Indirect.f32.zlib",
+      "buffer_sha256": "dbdf1e1a48a264d05bd595cd645afa7bce3bdcbe81f9e70fea198902b75da607",
+      "png_sha256": "e3f1beb62812d9fa58130f0b47c6a077167e7775ae1841708bbad3a35c6362d4"
+    },
+    {
+      "name": "Shadow3Combined",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 35.0,
+      "mean": 0.5085848202584685,
+      "zero_rgb_pixels": 5377,
+      "float32_rgb_sha256": "65c4e402204e1697104ebcf3e6b95bc32733bc31e55e7ec279502b2a74ad2d0f",
+      "float_buffer": "Buffers/Shadow3Combined.f32.zlib",
+      "buffer_sha256": "6abdd19f4676a042294f8359c1ec60a22c790c8a0355a8a90b343431cd2a752b",
+      "png_sha256": "dde4aabc6e0b98fde9bc4f04a45a7d70bad75bc32b39c4b4bdc65f0326b6a4cf"
+    },
+    {
+      "name": "Shadow3Visibility",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "mean": 0.645003756366752,
+      "zero_rgb_pixels": 38641,
+      "float32_rgb_sha256": "f45583c04c5e68e0b666da170d6a5cbea4d4df5b797a0e2d9adae5563161d615",
+      "float_buffer": "Buffers/Shadow2Visibility.f32.zlib",
+      "buffer_sha256": "86d794a03da2fff018972fcbaafbbc6f3b310fad118b63c88a08b22c1fc982db",
+      "png_sha256": "b58ca147616ebd238326f0c1f2904c0b7803659db2b7ec854de031eaccf43c4d"
+    },
+    {
+      "name": "Shadow3Off",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 0.0,
+      "mean": 0.0,
+      "zero_rgb_pixels": 129600,
+      "float32_rgb_sha256": "2e842802bccef91cabd2671b83639739256aa5cda053b8f72b52d63c433a700c",
+      "float_buffer": "Buffers/Shadow0Indirect.f32.zlib",
+      "buffer_sha256": "2197c417c693580cc357fb330a9fa8f7e6314c1e65c4c085f1b21c39db2530c3",
+      "png_sha256": "c22a7d202b5d11d5fe9335991aa704f7858fdd62281506e41f209931577dc8a7"
+    },
+    {
+      "name": "Shadow4Direct",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 35.0,
+      "mean": 0.5008106840588736,
+      "zero_rgb_pixels": 25926,
+      "float32_rgb_sha256": "705412d7547f55b527a9c83172bf4cc5c76968f8ffead394b6477256a6c5a801",
+      "float_buffer": "Buffers/Shadow4Direct.f32.zlib",
+      "buffer_sha256": "1432144b1c996a159519392585d9a7d1380bcfc95a93efd000acf199abdd1be1",
+      "png_sha256": "0fa2335bcc9d2ab4dc12c966a62e6467478400f2e0720239f1dbeb9dfd15f758"
+    },
+    {
+      "name": "Shadow4Indirect",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 0.0,
+      "mean": 0.0,
+      "zero_rgb_pixels": 129600,
+      "float32_rgb_sha256": "2e842802bccef91cabd2671b83639739256aa5cda053b8f72b52d63c433a700c",
+      "float_buffer": "Buffers/Shadow0Indirect.f32.zlib",
+      "buffer_sha256": "2197c417c693580cc357fb330a9fa8f7e6314c1e65c4c085f1b21c39db2530c3",
+      "png_sha256": "c22a7d202b5d11d5fe9335991aa704f7858fdd62281506e41f209931577dc8a7"
+    },
+    {
+      "name": "Shadow4OneBounce",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 0.0,
+      "mean": 0.0,
+      "zero_rgb_pixels": 129600,
+      "float32_rgb_sha256": "2e842802bccef91cabd2671b83639739256aa5cda053b8f72b52d63c433a700c",
+      "float_buffer": "Buffers/Shadow0Indirect.f32.zlib",
+      "buffer_sha256": "2197c417c693580cc357fb330a9fa8f7e6314c1e65c4c085f1b21c39db2530c3",
+      "png_sha256": "c22a7d202b5d11d5fe9335991aa704f7858fdd62281506e41f209931577dc8a7"
+    },
+    {
+      "name": "Shadow4Combined",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 35.0,
+      "mean": 0.5008106840588736,
+      "zero_rgb_pixels": 25926,
+      "float32_rgb_sha256": "705412d7547f55b527a9c83172bf4cc5c76968f8ffead394b6477256a6c5a801",
+      "float_buffer": "Buffers/Shadow4Direct.f32.zlib",
+      "buffer_sha256": "1432144b1c996a159519392585d9a7d1380bcfc95a93efd000acf199abdd1be1",
+      "png_sha256": "0fa2335bcc9d2ab4dc12c966a62e6467478400f2e0720239f1dbeb9dfd15f758"
+    },
+    {
+      "name": "Shadow4Visibility",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "mean": 0.7010022827505384,
+      "zero_rgb_pixels": 26908,
+      "float32_rgb_sha256": "a5d5ee9ba30c262be0fd3443173c12f7dc89104cd67008bbc94876681b24c516",
+      "float_buffer": "Buffers/Shadow4Visibility.f32.zlib",
+      "buffer_sha256": "82dc27ecce9481c919b1ab547788b1d9d0d6a0ceb382864d0f3b1d521b723cac",
+      "png_sha256": "1146a0094c4aba4defb72bb8baabc0ab427f3bfc913c1bef3c04bb4cc0509a32"
+    },
+    {
+      "name": "Shadow4Off",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 0.0,
+      "mean": 0.0,
+      "zero_rgb_pixels": 129600,
+      "float32_rgb_sha256": "2e842802bccef91cabd2671b83639739256aa5cda053b8f72b52d63c433a700c",
+      "float_buffer": "Buffers/Shadow0Indirect.f32.zlib",
+      "buffer_sha256": "2197c417c693580cc357fb330a9fa8f7e6314c1e65c4c085f1b21c39db2530c3",
+      "png_sha256": "c22a7d202b5d11d5fe9335991aa704f7858fdd62281506e41f209931577dc8a7"
+    },
+    {
+      "name": "Shadow5Direct",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 35.0,
+      "mean": 0.500810684770786,
+      "zero_rgb_pixels": 25926,
+      "float32_rgb_sha256": "d14a6968441112827ae560d9e616884520e08eb63924bc9c7c8208fced01083a",
+      "float_buffer": "Buffers/Shadow5Direct.f32.zlib",
+      "buffer_sha256": "2c23272d2a4403714b6a69cd62f927227cc9857191a2f4bbd98f9cfb39b637ec",
+      "png_sha256": "0fa2335bcc9d2ab4dc12c966a62e6467478400f2e0720239f1dbeb9dfd15f758"
+    },
+    {
+      "name": "Shadow5Indirect",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 0.9360328912734985,
+      "mean": 0.051946526041838297,
+      "zero_rgb_pixels": 6874,
+      "float32_rgb_sha256": "ce89cfb27648817ab5612bfd857dbdb2dc9a10dfb54480b57522d93bd322fa0a",
+      "float_buffer": "Buffers/Shadow5Indirect.f32.zlib",
+      "buffer_sha256": "b434da0d8c1ca1507d9b1d06e0fd8f798903dca45b5bf0730f396531d67bb57d",
+      "png_sha256": "749e0c177337d625800244928b6962b6aba795286a9445b350a7ce194593d59d"
+    },
+    {
+      "name": "Shadow5OneBounce",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 0.6589584946632385,
+      "mean": 0.03883081800944652,
+      "zero_rgb_pixels": 6877,
+      "float32_rgb_sha256": "6c3e7637eba2f13b2a1b0704ff65c61e43a95799a6f20838c530dbdada1aa2a5",
+      "float_buffer": "Buffers/Shadow5OneBounce.f32.zlib",
+      "buffer_sha256": "71f9a9cf0d53fde4317207d1474dd9d185a7c0b7e7b3d85ca00af22328131b81",
+      "png_sha256": "4e03c32225752441afaef6d191abea54442ff6f690b14f959bcf05b299ca5f92"
+    },
+    {
+      "name": "Shadow5Combined",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 35.0,
+      "mean": 0.5527572109421084,
+      "zero_rgb_pixels": 5377,
+      "float32_rgb_sha256": "2df5da700df97b21759c2ef081025f29d01d6e96cc999c41a96dce427dd05e21",
+      "float_buffer": "Buffers/Shadow5Combined.f32.zlib",
+      "buffer_sha256": "300caf1ab2dc2ed74110cd422b2e505a97a587e74fbff2b5185a7807d4294ebc",
+      "png_sha256": "2a63b42f320e8d7a9c87f70251d6e2bd9488028cb9db275ee554dc795c9b9c8f"
+    },
+    {
+      "name": "Shadow5Visibility",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "mean": 0.7010022827505384,
+      "zero_rgb_pixels": 26908,
+      "float32_rgb_sha256": "a5d5ee9ba30c262be0fd3443173c12f7dc89104cd67008bbc94876681b24c516",
+      "float_buffer": "Buffers/Shadow4Visibility.f32.zlib",
+      "buffer_sha256": "82dc27ecce9481c919b1ab547788b1d9d0d6a0ceb382864d0f3b1d521b723cac",
+      "png_sha256": "1146a0094c4aba4defb72bb8baabc0ab427f3bfc913c1bef3c04bb4cc0509a32"
+    },
+    {
+      "name": "Shadow5Off",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 0.0,
+      "mean": 0.0,
+      "zero_rgb_pixels": 129600,
+      "float32_rgb_sha256": "2e842802bccef91cabd2671b83639739256aa5cda053b8f72b52d63c433a700c",
+      "float_buffer": "Buffers/Shadow0Indirect.f32.zlib",
+      "buffer_sha256": "2197c417c693580cc357fb330a9fa8f7e6314c1e65c4c085f1b21c39db2530c3",
+      "png_sha256": "c22a7d202b5d11d5fe9335991aa704f7858fdd62281506e41f209931577dc8a7"
+    },
+    {
+      "name": "ShadowAnalyticSlice",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": true,
+      "exposure": 1,
+      "minimum": -0.29995882511138916,
+      "maximum": 0.30000001192092896,
+      "mean": 0.23778041159005456,
+      "zero_rgb_pixels": 0,
+      "float32_rgb_sha256": "5d2379d104f20698711766dd6bc1d1a83db5ccd8e74059b73d79c98717edb76a",
+      "float_buffer": "Buffers/ShadowAnalyticSlice.f32.zlib",
+      "buffer_sha256": "6aea5a31b6fcb804b18c31618815a2540a63c44e0000349d0225a723a6645fb7",
+      "png_sha256": "b74747879ce1e6640b5a7b02a114d3336abbd27d614da6ec5ca7ca501b21c120"
+    },
+    {
+      "name": "ShadowVoxelSlice",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": true,
+      "exposure": 1,
+      "minimum": -0.29850250482559204,
+      "maximum": 0.30000001192092896,
+      "mean": 0.23812393891900346,
+      "zero_rgb_pixels": 0,
+      "float32_rgb_sha256": "bb7ea68e926048ae19041abeb3b6d9c7f84e5030d5597b1ed385656b4a739261",
+      "float_buffer": "Buffers/ShadowVoxelSlice.f32.zlib",
+      "buffer_sha256": "02a2eee97e1483cea520517c8de741e12bbdbc3bdd87a0ca945cb2088e6b9276",
+      "png_sha256": "b17184cad9ed6c3c297ec089f3c2f0f98ffd1d79457c4f7a150adb15b579b62e"
+    },
+    {
+      "name": "ShadowNormals",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "mean": 0.47860845586580103,
+      "zero_rgb_pixels": 5377,
+      "float32_rgb_sha256": "a3d3cdffb56e820577d6b808fa233a81a7da31fb8d0322eac96bf5d10e2443c1",
+      "float_buffer": "Buffers/ShadowNormals.f32.zlib",
+      "buffer_sha256": "7d6f8b41ba1c862fa193f4366f72a7072502e5557970e629668202d81dccf66a",
+      "png_sha256": "604e1078c89833de72dc5853d3a9ea1a5e6791a939821742e2696cb3a4e42e77"
+    },
+    {
+      "name": "ShadowPrimaryMasks",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "mean": 0.436855066872428,
+      "zero_rgb_pixels": 5377,
+      "float32_rgb_sha256": "4a6a87ab7f593707a5a061296e03cdf922de73ec4a73280b15cba01153d9eeb6",
+      "float_buffer": "Buffers/ShadowPrimaryMasks.f32.zlib",
+      "buffer_sha256": "af68106287bd10af86d6e77d3733718b648253f6e50bb83bedf8950009e42ed7",
+      "png_sha256": "3579b5348469afc3afff7fcd8abd0c7cfacc9b0227b245c5db820aab29ca6b0a"
+    },
+    {
+      "name": "ShadowVehicle0Direct",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 35.0,
+      "mean": 0.26185903005160344,
+      "zero_rgb_pixels": 51928,
+      "float32_rgb_sha256": "e7ea2cf1d5ec185bc8bc2fb2744a0c97eb19585c08dc52e7a7d10c096b395b38",
+      "float_buffer": "Buffers/ShadowVehicle0Direct.f32.zlib",
+      "buffer_sha256": "bcb2730532e837a9d2c203b3fe2995d28d07f0941a1878d6ec071fec258ac233",
+      "png_sha256": "feabd250122d7a2cf8e4528759026d794be3e9132c71b51bb97d0e79a4d40148"
+    },
+    {
+      "name": "ShadowVehicle0Indirect",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 0.06741326302289963,
+      "mean": 0.0023814889720294055,
+      "zero_rgb_pixels": 38827,
+      "float32_rgb_sha256": "13350c5d006380c96c41a63e7e7d6132d1711eef89936274ad581f14de6ddd37",
+      "float_buffer": "Buffers/ShadowVehicle0Indirect.f32.zlib",
+      "buffer_sha256": "f9116e393dbf51e4c393e55d5c6da17889758be14119b2bb4fadbeba2c2297cb",
+      "png_sha256": "4cc5cf51d6b5cd7f68e73af43900c1aaba4b9de9091d2492eef43205112c1a64"
+    },
+    {
+      "name": "ShadowVehicle0Combined",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 35.0,
+      "mean": 0.26424051902490675,
+      "zero_rgb_pixels": 37963,
+      "float32_rgb_sha256": "c973062cd89cf5f3aa51b75bc4e3eb21f3f0bb3dabf9438bfc1c40b7444795b2",
+      "float_buffer": "Buffers/ShadowVehicle0Combined.f32.zlib",
+      "buffer_sha256": "8b1be4916f233cf2d6e41f246200c204736f88369291c32061a81b990a1ef198",
+      "png_sha256": "c5a3337a9fecbca740e8dcd89e66794684cc6f07298ea803184b02f07a10bf71"
+    },
+    {
+      "name": "ShadowVehicle1Direct",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 35.0,
+      "mean": 0.27362579713025886,
+      "zero_rgb_pixels": 51890,
+      "float32_rgb_sha256": "6644f68e146b2e814139a4fd003a48d9b84e206ce6bd2faf92c41b846d4da4ac",
+      "float_buffer": null,
+      "buffer_sha256": null,
+      "png_sha256": "dac1242cba165842e0780c7f29c6439844ebb41c94719e6ca841001a7c05b7c9"
+    },
+    {
+      "name": "ShadowVehicle1Indirect",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 0.06262673437595367,
+      "mean": 0.0024879634111795307,
+      "zero_rgb_pixels": 38877,
+      "float32_rgb_sha256": "8f790eb16728bbc54c8ec3525947e3406f57e3c7207ce31c3e5bcf6e84cd974b",
+      "float_buffer": null,
+      "buffer_sha256": null,
+      "png_sha256": "aaafd9eb42c175a36b204c5842954d2216be61e1d10de1a891cdb8c985e29ac2"
+    },
+    {
+      "name": "ShadowVehicle1Combined",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 35.0,
+      "mean": 0.2761137605392702,
+      "zero_rgb_pixels": 37963,
+      "float32_rgb_sha256": "6397fb6e7996af5c70507fb3e73e6e76c8ab43924a150777ab27f2307bf2b523",
+      "float_buffer": null,
+      "buffer_sha256": null,
+      "png_sha256": "40520f63ccc397ff8febd52867ecba12e2756523cb76317c7accfc3af0772c89"
+    },
+    {
+      "name": "ShadowVehicle2Direct",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 35.0,
+      "mean": 0.28469530700718493,
+      "zero_rgb_pixels": 50398,
+      "float32_rgb_sha256": "982e5715be0de4cec71bfb1b54acbd6e1e99a199ec633bc35e3e101b16acbffb",
+      "float_buffer": null,
+      "buffer_sha256": null,
+      "png_sha256": "745b8946f345095e90abc35e255b8431c1ade26ef8398c9081d859fe73a2859c"
+    },
+    {
+      "name": "ShadowVehicle2Indirect",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 0.06237983703613281,
+      "mean": 0.0023570353886098374,
+      "zero_rgb_pixels": 38913,
+      "float32_rgb_sha256": "66f43f41142c531bd67f6ceff1bbf3aeb374e40ef7c26271938fc32e28f812ff",
+      "float_buffer": null,
+      "buffer_sha256": null,
+      "png_sha256": "c624195ee00b4533d810064cd1ba670184e7d27e65a0a797bd7fd13f2731e4d7"
+    },
+    {
+      "name": "ShadowVehicle2Combined",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 35.0,
+      "mean": 0.28705234238554067,
+      "zero_rgb_pixels": 37963,
+      "float32_rgb_sha256": "69da5c84b0e901769c81dc914543d19d0347b8e3a5003bd502dd160ee3d8f87e",
+      "float_buffer": null,
+      "buffer_sha256": null,
+      "png_sha256": "fce07be9eed5453c2956026c5fdc52a69fbf6b6f6599d7b39948229c50af6429"
+    },
+    {
+      "name": "ShadowVehicle3Direct",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 35.0,
+      "mean": 0.2814463285457453,
+      "zero_rgb_pixels": 50478,
+      "float32_rgb_sha256": "feb69d11619deeae32e269506f0ec00d56e83f4352ab4112665923a0c1c70bfe",
+      "float_buffer": null,
+      "buffer_sha256": null,
+      "png_sha256": "200c9ccddf21486b79767be3e36acf8a29fb856fa77cc6a558fcb1739f3647fe"
+    },
+    {
+      "name": "ShadowVehicle3Indirect",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 0.07033871859312057,
+      "mean": 0.0022991308495273317,
+      "zero_rgb_pixels": 38891,
+      "float32_rgb_sha256": "58b8563613ca29afcc7d77a8b00da2abde13edc2de506a3f4a1917be2cf1bda2",
+      "float_buffer": null,
+      "buffer_sha256": null,
+      "png_sha256": "759d0ae61d025722226ed8a3ef0cd83c7a5d0c7489c50afca747126e4868ac66"
+    },
+    {
+      "name": "ShadowVehicle3Combined",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 35.0,
+      "mean": 0.2837454593712699,
+      "zero_rgb_pixels": 37963,
+      "float32_rgb_sha256": "376655b708b788b81462c1d9fda1cca0bee787dbea76367c6783d0b07ff67cd8",
+      "float_buffer": null,
+      "buffer_sha256": null,
+      "png_sha256": "feb4bf1a4cac4a78af7decbb8a05d2bdebb670c360bac9a05261e77c889f8efe"
+    },
+    {
+      "name": "ShadowVehicle4Direct",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 35.0,
+      "mean": 0.26862874647344676,
+      "zero_rgb_pixels": 51780,
+      "float32_rgb_sha256": "d41f970ff6411119c233f5bee5c3cc60b1e1f97800f30e7b37ab8b7f08ea10d3",
+      "float_buffer": null,
+      "buffer_sha256": null,
+      "png_sha256": "4c044152a6c9788e068b7425d80696aa1eab963b7bd099938592ac75909936ae"
+    },
+    {
+      "name": "ShadowVehicle4Indirect",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 0.08359073847532272,
+      "mean": 0.0023825792021794075,
+      "zero_rgb_pixels": 38843,
+      "float32_rgb_sha256": "026b2879c1b369b6a98f4e26c4fbb80d826b6cf2b8b0fc53920594bb5ee85d2e",
+      "float_buffer": null,
+      "buffer_sha256": null,
+      "png_sha256": "e1bf7e73ba81a39f7f3e60a5eb1bd210037d04d2c68a3d0cee4034e263753e9e"
+    },
+    {
+      "name": "ShadowVehicle4Combined",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 35.0,
+      "mean": 0.27101132568437586,
+      "zero_rgb_pixels": 37963,
+      "float32_rgb_sha256": "b957cac7a88e86392315d61cc4a2903845f37556623f0d6c1758eef42be26d64",
+      "float_buffer": null,
+      "buffer_sha256": null,
+      "png_sha256": "1882638daf83240b40b946500bcf98a75d96aeddee997ea6cfe81a120be824e2"
+    },
+    {
+      "name": "ShadowVehicle5Direct",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 35.0,
+      "mean": 0.25971183630348166,
+      "zero_rgb_pixels": 52242,
+      "float32_rgb_sha256": "bc450e65376f0683693281ab3cb583471761c71037f027952659337f3a5422da",
+      "float_buffer": null,
+      "buffer_sha256": null,
+      "png_sha256": "c7fdab8e581b9a398c31aa1ed582d777adb3595fad3c10d6416dfd69ca12bee3"
+    },
+    {
+      "name": "ShadowVehicle5Indirect",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 0.08012046664953232,
+      "mean": 0.002365471086578595,
+      "zero_rgb_pixels": 38811,
+      "float32_rgb_sha256": "e9bb7b33429fbbc7f295ecb689689932d728cfc6caf578c2e3f889d4ea2721e6",
+      "float_buffer": null,
+      "buffer_sha256": null,
+      "png_sha256": "64a0154ca6c1ce1a78e52cbb84a856aeb985a0046c3de4498d6f1da4731ce24e"
+    },
+    {
+      "name": "ShadowVehicle5Combined",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 35.0,
+      "mean": 0.2620773073958021,
+      "zero_rgb_pixels": 37963,
+      "float32_rgb_sha256": "21ffb8f1582119c9c11e98899da324e2ae0312f4146ff8ec31704ea859ef8fe5",
+      "float_buffer": null,
+      "buffer_sha256": null,
+      "png_sha256": "754e5f0dc7f2bcfd03ad4a8eb1385a1fbe61b6c599066fa31a04804134623712"
+    },
+    {
+      "name": "ShadowVehicleCacheCleared",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 35.0,
+      "mean": 0.26185903005160344,
+      "zero_rgb_pixels": 51928,
+      "float32_rgb_sha256": "e7ea2cf1d5ec185bc8bc2fb2744a0c97eb19585c08dc52e7a7d10c096b395b38",
+      "float_buffer": "Buffers/ShadowVehicle0Direct.f32.zlib",
+      "buffer_sha256": "bcb2730532e837a9d2c203b3fe2995d28d07f0941a1878d6ec071fec258ac233",
+      "png_sha256": "feabd250122d7a2cf8e4528759026d794be3e9132c71b51bb97d0e79a4d40148"
+    },
+    {
+      "name": "ShadowVehicleCacheRestored",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 35.0,
+      "mean": 0.26424051902490675,
+      "zero_rgb_pixels": 37963,
+      "float32_rgb_sha256": "c973062cd89cf5f3aa51b75bc4e3eb21f3f0bb3dabf9438bfc1c40b7444795b2",
+      "float_buffer": "Buffers/ShadowVehicle0Combined.f32.zlib",
+      "buffer_sha256": "8b1be4916f233cf2d6e41f246200c204736f88369291c32061a81b990a1ef198",
+      "png_sha256": "c5a3337a9fecbca740e8dcd89e66794684cc6f07298ea803184b02f07a10bf71"
+    },
+    {
+      "name": "ShadowVehicleOff",
+      "native_cpp_capture": true,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 0.0,
+      "mean": 0.0,
+      "zero_rgb_pixels": 129600,
+      "float32_rgb_sha256": "2e842802bccef91cabd2671b83639739256aa5cda053b8f72b52d63c433a700c",
+      "float_buffer": "Buffers/Shadow0Indirect.f32.zlib",
+      "buffer_sha256": "2197c417c693580cc357fb330a9fa8f7e6314c1e65c4c085f1b21c39db2530c3",
+      "png_sha256": "c22a7d202b5d11d5fe9335991aa704f7858fdd62281506e41f209931577dc8a7"
+    },
+    {
+      "name": "Shadow5TwoSites",
+      "native_cpp_capture": false,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 1,
+      "minimum": 0.0,
+      "maximum": 35.0,
+      "mean": 0.5396415029005316,
+      "zero_rgb_pixels": 5380,
+      "float32_rgb_sha256": "7bcc04c650b1e4ab6d4d19b7411f00bed771be48c4c4a35b10582536f73b9cf0",
+      "float_buffer": "Buffers/Shadow5TwoSites.f32.zlib",
+      "buffer_sha256": "c6c534d1f20f750d0f8a74dae6560126067fa14fa64d63c4e6ea8925d3afd99d",
+      "png_sha256": "10468778f78d0d0e365e45abf3211842d4179372d6ca5f0429f00e02484f1a06"
+    },
+    {
+      "name": "Shadow0DirectError",
+      "native_cpp_capture": false,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 8,
+      "minimum": 0.0,
+      "maximum": 0.14627385139465332,
+      "mean": 0.0008719660508733121,
+      "zero_rgb_pixels": 28583,
+      "float32_rgb_sha256": "eea0bcc6a557521c05f0118ae37cd28862f97c9e94a78dc5d7c413697c05db6e",
+      "float_buffer": "Buffers/Shadow0DirectError.f32.zlib",
+      "buffer_sha256": "5602729acd463754d3c1c915818128886f4def80ba4982ba12d0d13e1d3ce68a",
+      "png_sha256": "b0b6dafb72c7fb7ee91e13d7779dfd36feff72d4c913db1df9473f86413c46ca"
+    },
+    {
+      "name": "Shadow1DirectError",
+      "native_cpp_capture": false,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 8,
+      "minimum": 0.0,
+      "maximum": 0.18105018138885498,
+      "mean": 0.001062680454276163,
+      "zero_rgb_pixels": 28569,
+      "float32_rgb_sha256": "1a2e324ea1bb9228656c2db22446cdd3fd32d30f6c760c939e42148fcd571ca8",
+      "float_buffer": "Buffers/Shadow1DirectError.f32.zlib",
+      "buffer_sha256": "bc4aa0dc62e82246352d17c69973d9270969e73804b895762c0ea1bf2abe0da1",
+      "png_sha256": "23043c4776f130535f2125477bbf10c23439845543f76e11a457a2f10ebbd8b5"
+    },
+    {
+      "name": "Shadow2DirectError",
+      "native_cpp_capture": false,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 8,
+      "minimum": 0.0,
+      "maximum": 1.674797773361206,
+      "mean": 0.003929975113529853,
+      "zero_rgb_pixels": 28537,
+      "float32_rgb_sha256": "73957ba5272564d3fecc55108e9fa41dfb697dc80ac466d8335621b6abcaa96d",
+      "float_buffer": "Buffers/Shadow2DirectError.f32.zlib",
+      "buffer_sha256": "8677452ce88d8b17a5d4a0a05a0843d6b6b5f5509ca3a8aa751f0ca3755c4631",
+      "png_sha256": "9eb168b7ba509ea5abbc65bfa2b6e230a49d935d20670a104d53a0535bffc92a"
+    },
+    {
+      "name": "Shadow3DirectError",
+      "native_cpp_capture": false,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 8,
+      "minimum": 0.0,
+      "maximum": 1.674797773361206,
+      "mean": 0.003929975113529853,
+      "zero_rgb_pixels": 28537,
+      "float32_rgb_sha256": "73957ba5272564d3fecc55108e9fa41dfb697dc80ac466d8335621b6abcaa96d",
+      "float_buffer": "Buffers/Shadow2DirectError.f32.zlib",
+      "buffer_sha256": "8677452ce88d8b17a5d4a0a05a0843d6b6b5f5509ca3a8aa751f0ca3755c4631",
+      "png_sha256": "9eb168b7ba509ea5abbc65bfa2b6e230a49d935d20670a104d53a0535bffc92a"
+    },
+    {
+      "name": "Shadow4DirectError",
+      "native_cpp_capture": false,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 8,
+      "minimum": 0.0,
+      "maximum": 7.62939453125e-06,
+      "mean": 1.997857841456687e-08,
+      "zero_rgb_pixels": 29790,
+      "float32_rgb_sha256": "367c43506354e711fe9eda52f4fa5ecee7327ddbec084b0987d7985e236d073d",
+      "float_buffer": "Buffers/Shadow4DirectError.f32.zlib",
+      "buffer_sha256": "699c41be09bf15b15f3f5d8b75c853f63aa2afa00b41297b7bef7f9fade72a09",
+      "png_sha256": "c22a7d202b5d11d5fe9335991aa704f7858fdd62281506e41f209931577dc8a7"
+    },
+    {
+      "name": "Shadow5DirectError",
+      "native_cpp_capture": false,
+      "extent": [
+        480,
+        270
+      ],
+      "signed_distance_m": false,
+      "exposure": 8,
+      "minimum": 0.0,
+      "maximum": 0.0,
+      "mean": 0.0,
+      "zero_rgb_pixels": 129600,
+      "float32_rgb_sha256": "2e842802bccef91cabd2671b83639739256aa5cda053b8f72b52d63c433a700c",
+      "float_buffer": "Buffers/Shadow0Indirect.f32.zlib",
+      "buffer_sha256": "2197c417c693580cc357fb330a9fa8f7e6314c1e65c4c085f1b21c39db2530c3",
+      "png_sha256": "c22a7d202b5d11d5fe9335991aa704f7858fdd62281506e41f209931577dc8a7"
+    }
+  ],
+  "comparisons": {
+    "direct_to_finite_96": {
+      "0": {
+        "linear_rgb_rmse_all": 0.0038661656679928377,
+        "linear_rgb_rmse_opaque_receivers": 0.003981356664265157,
+        "linear_rgb_rmse_floor": 0.005609762978225505,
+        "max_absolute_channel": 0.14627385139465332
+      },
+      "1": {
+        "linear_rgb_rmse_all": 0.004810727225117058,
+        "linear_rgb_rmse_opaque_receivers": 0.004954083756061136,
+        "linear_rgb_rmse_floor": 0.0069745200001997635,
+        "max_absolute_channel": 0.18105018138885498
+      },
+      "2": {
+        "linear_rgb_rmse_all": 0.035720864050579886,
+        "linear_rgb_rmse_opaque_receivers": 0.03673635181507735,
+        "linear_rgb_rmse_floor": 0.011318119637270222,
+        "max_absolute_channel": 1.674797773361206
+      },
+      "3": {
+        "linear_rgb_rmse_all": 0.035720864050579886,
+        "linear_rgb_rmse_opaque_receivers": 0.03673635181507735,
+        "linear_rgb_rmse_floor": 0.011318119637270222,
+        "max_absolute_channel": 1.674797773361206
+      },
+      "4": {
+        "linear_rgb_rmse_all": 8.46962949422889e-08,
+        "linear_rgb_rmse_opaque_receivers": 7.103991427786141e-08,
+        "linear_rgb_rmse_floor": 9.504924679738414e-08,
+        "max_absolute_channel": 7.62939453125e-06
+      },
+      "5": {
+        "linear_rgb_rmse_all": 0.0,
+        "linear_rgb_rmse_opaque_receivers": 0.0,
+        "linear_rgb_rmse_floor": 0.0,
+        "max_absolute_channel": 0.0
+      }
+    },
+    "cone_gi_to_matched_one_secondary_site_96": {
+      "linear_rgb_rmse_all": 0.05992272300714824,
+      "linear_rgb_rmse_opaque_receivers": 0.06165477225476854,
+      "linear_rgb_rmse_floor": 0.04264888199876937,
+      "max_absolute_channel": 0.5076505243778229
+    },
+    "cone_combined_to_matched_two_sites_96": {
+      "linear_rgb_rmse_all": 0.07445433319655889,
+      "linear_rgb_rmse_opaque_receivers": 0.07659757897129801,
+      "linear_rgb_rmse_floor": 0.04599905783359271,
+      "max_absolute_channel": 1.864467367529869
+    }
+  },
+  "benchmark": {
+    "conditions": {
+      "passed": true,
+      "rounds": 5,
+      "warmup_rounds": 1,
+      "threads": 2,
+      "width": 480,
+      "height": 270,
+      "primary_sites": 4,
+      "cap_samples_each_primary": 24,
+      "reference_paths_total_pixel": 96,
+      "selection6": "SDF reference direct only, one scattering site, 96 paths total per pixel",
+      "alternating_order": true,
+      "bit_identical_repeats": true,
+      "primary_cpu_ms": 369.685962,
+      "cold_distance_and_radiance_cpu_ms": 503.980238,
+      "timed_region": "transport image allocation and integration; excludes primary tracing, field/cache construction, hashing and file encoding",
+      "hardware_gpu_timing": false,
+      "renderer_accepted": false
+    },
+    "methods": {
+      "0": {
+        "cpu_ms": [
+          987.490027,
+          1001.663202,
+          1006.967699,
+          969.180914,
+          999.040886
+        ],
+        "median_cpu_ms": 999.040886,
+        "fnv1a64": "1678858258061814051",
+        "scope": "Point-sample SDF (no penumbra)"
+      },
+      "1": {
+        "cpu_ms": [
+          1134.131694,
+          1072.44155,
+          1073.363638,
+          1085.785983,
+          1085.62231
+        ],
+        "median_cpu_ms": 1085.62231,
+        "fnv1a64": "17693877117932694275",
+        "scope": "Analytic SDF cone penumbra"
+      },
+      "2": {
+        "cpu_ms": [
+          860.094251,
+          846.853514,
+          828.371942,
+          849.345206,
+          841.239127
+        ],
+        "median_cpu_ms": 846.853514,
+        "fnv1a64": "14930817397255343611",
+        "scope": "3D voxel SDF clipmap penumbra"
+      },
+      "3": {
+        "cpu_ms": [
+          9146.129227,
+          8385.894261,
+          8406.525441,
+          8749.34301,
+          8480.228184
+        ],
+        "median_cpu_ms": 8480.228184,
+        "fnv1a64": "17259772294759263868",
+        "scope": "3D voxel SDF penumbra + cone GI"
+      },
+      "4": {
+        "cpu_ms": [
+          17568.853901,
+          17193.165205,
+          17486.197477,
+          17624.825747,
+          17467.529428
+        ],
+        "median_cpu_ms": 17486.197477,
+        "fnv1a64": "8025068095657151716",
+        "scope": "Hybrid SDF + Sobol spherical cap"
+      },
+      "5": {
+        "cpu_ms": [
+          43892.222774,
+          43629.537528,
+          44396.475119,
+          43526.175935,
+          43422.144446
+        ],
+        "median_cpu_ms": 43629.537528,
+        "fnv1a64": "2869370247611580934",
+        "scope": "SDF Monte Carlo PT ref (96 spp)"
+      },
+      "6": {
+        "cpu_ms": [
+          10801.346952,
+          10648.174212,
+          10575.18981,
+          10803.303373,
+          10965.524849
+        ],
+        "median_cpu_ms": 10801.346952,
+        "fnv1a64": "7803660811794676256",
+        "scope": "SDF direct-only 96-spp reference"
+      }
+    }
+  },
+  "runtime": {
+    "ShadowNumeric": {
+      "passed": true,
+      "renderer_accepted": false,
+      "assertions": 18251,
+      "azimuth_independent_max_error": 1.78813934326e-07,
+      "thin_grazing_far_segments": 256,
+      "penumbra_receiver_distances_m": [
+        0.5,
+        1.5,
+        3,
+        6
+      ],
+      "penumbra_10_90_widths_m": [
+        0.105430483818,
+        0.307391822338,
+        0.609472632408,
+        1.21624994278
+      ],
+      "sphere_cap_segments": 7980,
+      "normal_max_error": 0.000289082527161,
+      "sphere_irradiance_relative_error": 9.25370022742e-06,
+      "hybrid_segments": 7980,
+      "hybrid_visibility_differences": 0,
+      "hybrid_clip_skips": 80382,
+      "hybrid_sdf_refinements": 1815,
+      "distance_lower_excess": 0,
+      "distance_clear_rgb_difference": 0.628852009773,
+      "distance_restore_rgb_difference": 0,
+      "radiance_clear_maximum": 0,
+      "radiance_restore_difference": 0,
+      "motion_stale_rejections": 1,
+      "motion_cold_distance_difference": 0,
+      "motion_cold_radiance_difference": 0,
+      "cpu_ms_including_setup": 3540.922812
+    },
+    "ShadowCapture": {
+      "passed": true,
+      "paths_rendered": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "width": 480,
+      "height": 270,
+      "native_captures": 40,
+      "primary_sites": 4,
+      "paths_per_primary_site_reference": 24,
+      "paths_total_per_pixel_reference": 96,
+      "nee_samples_each_path_site": 1,
+      "max_scattering_sites_reference": 4,
+      "sphere_center_radius_m": [
+        -2.45000004768,
+        1.60000002384,
+        0.72000002861,
+        0.430000007153
+      ],
+      "sphere_radiance_rgb": [
+        35,
+        30,
+        21
+      ],
+      "other_sources": 0,
+      "source_off_black_pixels": 777600,
+      "shadow_step_limit": 256,
+      "hit_tolerance_m": 0.0004,
+      "surface_offset_m": 0.002,
+      "shadow_grid_extent": [
+        64,
+        64,
+        64
+      ],
+      "shadow_cell_widths_m": [
+        0.0625,
+        0.125,
+        0.25
+      ],
+      "radiance_cell_widths_m": [
+        0.125,
+        0.25,
+        0.5
+      ],
+      "radiance_mips_each_level": 7,
+      "radiance_cones": 16,
+      "cone_normal_offset_m": 0.16,
+      "cone_initial_travel_m": 0.125,
+      "scene_input_fnv1a64": "3990250324657093347",
+      "float32_transport": true,
+      "native_cpp_cpu_captures": true,
+      "renderer_accepted": false
+    },
+    "ShadowVehicle": {
+      "passed": true,
+      "poses": [
+        {
+          "pose": 0,
+          "translation_m": [
+            0,
+            0,
+            0
+          ],
+          "rotation_cos_sin": [
+            1,
+            0
+          ],
+          "sphere_center_radius_m": [
+            -2.79999995232,
+            -1.29999995232,
+            2.40000009537,
+            0.649999976158
+          ],
+          "setup_cpu_ms": 878.727864,
+          "capture_cpu_ms": 10048.747126,
+          "rewritten_texels": [
+            110592,
+            110592,
+            110592
+          ]
+        },
+        {
+          "pose": 1,
+          "translation_m": [
+            0.779422879219,
+            0.110000014305,
+            0
+          ],
+          "rotation_cos_sin": [
+            0.987874567509,
+            0.155254006386
+          ],
+          "sphere_center_radius_m": [
+            -2.41028857231,
+            -1.45000004768,
+            2.5299038887,
+            0.649999976158
+          ],
+          "setup_cpu_ms": 898.084584,
+          "capture_cpu_ms": 9686.485347,
+          "rewritten_texels": [
+            67377,
+            17987,
+            3661
+          ]
+        },
+        {
+          "pose": 2,
+          "translation_m": [
+            0.779422819614,
+            0.330000013113,
+            0
+          ],
+          "rotation_cos_sin": [
+            0.987874567509,
+            0.155253991485
+          ],
+          "sphere_center_radius_m": [
+            -2.41028857231,
+            -1.75,
+            2.5299038887,
+            0.649999976158
+          ],
+          "setup_cpu_ms": 946.827605,
+          "capture_cpu_ms": 9565.948789,
+          "rewritten_texels": [
+            65698,
+            12475,
+            1277
+          ]
+        },
+        {
+          "pose": 3,
+          "translation_m": [
+            -7.86805003372e-08,
+            0.439999997616,
+            0
+          ],
+          "rotation_cos_sin": [
+            1,
+            -1.57361004227e-08
+          ],
+          "sphere_center_radius_m": [
+            -2.79999995232,
+            -1.90000009537,
+            2.40000009537,
+            0.649999976158
+          ],
+          "setup_cpu_ms": 848.570597,
+          "capture_cpu_ms": 9671.654032,
+          "rewritten_texels": [
+            70452,
+            20376,
+            5986
+          ]
+        },
+        {
+          "pose": 4,
+          "translation_m": [
+            -0.779422998428,
+            0.329999953508,
+            0
+          ],
+          "rotation_cos_sin": [
+            0.987874567509,
+            -0.155254021287
+          ],
+          "sphere_center_radius_m": [
+            -3.18971133232,
+            -1.75,
+            2.27009630203,
+            0.649999976158
+          ],
+          "setup_cpu_ms": 1002.002836,
+          "capture_cpu_ms": 9540.334207,
+          "rewritten_texels": [
+            69301,
+            18072,
+            3682
+          ]
+        },
+        {
+          "pose": 5,
+          "translation_m": [
+            -0.779422700405,
+            0.109999924898,
+            0
+          ],
+          "rotation_cos_sin": [
+            0.987874567509,
+            -0.155253961682
+          ],
+          "sphere_center_radius_m": [
+            -3.18971133232,
+            -1.45000004768,
+            2.27009630203,
+            0.649999976158
+          ],
+          "setup_cpu_ms": 842.132903,
+          "capture_cpu_ms": 9831.554337,
+          "rewritten_texels": [
+            65565,
+            12475,
+            1277
+          ]
+        }
+      ],
+      "completed": true,
+      "renderer_accepted": false,
+      "sphere_only": true,
+      "vehicle_facets": 25068,
+      "unsigned_bake_extent": [
+        80,
+        40,
+        32
+      ],
+      "analytic_vehicle_sdf": false,
+      "contact_refinement": "original triangles",
+      "native_width": 480,
+      "native_height": 270,
+      "stale_rejections": 6,
+      "visibility_segments": 6144,
+      "visibility_differences": 0,
+      "bake_march_steps": 18204,
+      "empty_marched_segments": 468,
+      "direct_cull_difference": 0,
+      "cold_clip_maximum": 0,
+      "cold_image_maximum": 0,
+      "cache_clear_rgb_difference": 0.0674132704735,
+      "cache_restore_difference": 0,
+      "source_off_black_pixels": 129600
+    },
+    "ShadowVulkan": {
+      "passed": true,
+      "renderer_accepted": false,
+      "device": "SwiftShader Device (Subzero)",
+      "device_type": 4,
+      "compared_pixels_each_path": 288,
+      "primary_sites": 4,
+      "paths_per_pixel_reference": 96,
+      "full_capture": false,
+      "guarded_regions": 8,
+      "guard_bytes_each": 64,
+      "float32_direct_max": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        2.38418579102e-07
+      ],
+      "float32_indirect_max": [
+        0,
+        0,
+        0,
+        2.23517417908e-08,
+        0,
+        5.96046447754e-08
+      ],
+      "float32_first_bounce_max": [
+        0,
+        0,
+        0,
+        2.23517417908e-08,
+        0,
+        2.98023223877e-08
+      ],
+      "source_off_black_pixels": 1728,
+      "distance_clear_rgb_difference": 0.662786126137,
+      "cull_disabled_difference": 0,
+      "radiance_clear_maximum": 0,
+      "restore_difference": 0,
+      "moving_sdf_source_changed_pixels": 221,
+      "moving_sdf_source_max_error": 0,
+      "regression_pixel": 36347,
+      "per_path_probes": 96,
+      "per_path_max_error": 0,
+      "per_bounce_max_error": 0,
+      "geometry_probes": 288,
+      "hit_differences": 0,
+      "position_max": 0,
+      "normal_max": 0,
+      "analytic_distance_max": 0,
+      "voxel_distance_max": 0,
+      "voxel_lower_max": 0,
+      "executed_entries_fnv1a64": {
+        "AnalyticSdfPenumbra": "13593058004031824519",
+        "HybridSdfSphereCap": "11495267059544597164",
+        "InspectSdfBounce": "13367598997918737752",
+        "InspectSdfGeometry": "14129058758696577971",
+        "InspectSdfPath": "15196318967546882150",
+        "PointSdfShadow": "8496752478809743172",
+        "ReferenceSdfPaths": "17872063601108472326",
+        "VoxelSdfConeGi": "3579475459622649683",
+        "VoxelSdfPenumbra": "8014002293809623272"
+      }
+    },
+    "ShadowBenchmark": {
+      "passed": true,
+      "rounds": 5,
+      "warmup_rounds": 1,
+      "threads": 2,
+      "width": 480,
+      "height": 270,
+      "primary_sites": 4,
+      "cap_samples_each_primary": 24,
+      "reference_paths_total_pixel": 96,
+      "selection6": "SDF reference direct only, one scattering site, 96 paths total per pixel",
+      "alternating_order": true,
+      "bit_identical_repeats": true,
+      "primary_cpu_ms": 369.685962,
+      "cold_distance_and_radiance_cpu_ms": 503.980238,
+      "timed_region": "transport image allocation and integration; excludes primary tracing, field/cache construction, hashing and file encoding",
+      "hardware_gpu_timing": false,
+      "renderer_accepted": false
+    }
+  },
+  "animations": {
+    "Direct": {
+      "file": "Images/ShadowVehicleDirectMotion.png",
+      "sha256": "a60d30947ae19a2dbaa8f5d9eaefbb6dfcd75e85953a1c255415332483b29013",
+      "frames": [
+        "ShadowVehicle0Direct",
+        "ShadowVehicle1Direct",
+        "ShadowVehicle2Direct",
+        "ShadowVehicle3Direct",
+        "ShadowVehicle4Direct",
+        "ShadowVehicle5Direct"
+      ],
+      "frame_ms": 500,
+      "native_extent": [
+        480,
+        270
+      ],
+      "interpolated": false
+    },
+    "Indirect": {
+      "file": "Images/ShadowVehicleIndirectMotion.png",
+      "sha256": "d314e618d664dcc8bde00bfb787e4c3f33da81217753a95b7849ded220d351c0",
+      "frames": [
+        "ShadowVehicle0Indirect",
+        "ShadowVehicle1Indirect",
+        "ShadowVehicle2Indirect",
+        "ShadowVehicle3Indirect",
+        "ShadowVehicle4Indirect",
+        "ShadowVehicle5Indirect"
+      ],
+      "frame_ms": 500,
+      "native_extent": [
+        480,
+        270
+      ],
+      "interpolated": false
+    },
+    "Combined": {
+      "file": "Images/ShadowVehicleCombinedMotion.png",
+      "sha256": "1f605dc66a441db49449661d7923edad40030b3e9b450865717b266956799097",
+      "frames": [
+        "ShadowVehicle0Combined",
+        "ShadowVehicle1Combined",
+        "ShadowVehicle2Combined",
+        "ShadowVehicle3Combined",
+        "ShadowVehicle4Combined",
+        "ShadowVehicle5Combined"
+      ],
+      "frame_ms": 500,
+      "native_extent": [
+        480,
+        270
+      ],
+      "interpolated": false
+    }
+  },
+  "archive_sha256": "03daeee9ffe5c7e514bd1c5ed9f455fcf58f11558385fe4d495dffe8b87da42f",
+  "better_quality_and_faster_production_gate": false,
+  "limitations": [
+    "Four shared primary sites x 24 paths = 96 total paths per pixel, not 384.",
+    "Finite SDF hit/segment tolerance and four scattering sites bias the reference; 96 spp remains noisy.",
+    "Path 3 has one reflected cone bounce; compare to PT first bounce, not its full indirect image.",
+    "Voxel penumbra corner/contact errors and cone-filter detail loss remain visible; no filtering hides them.",
+    "Fifteen moving-vehicle Float32 payloads omitted; every native PNG and raw-float digest retained.",
+    "Vehicle companion uses original triangles for contact, not a signed analytic vehicle field.",
+    "Calibration distance levels have a fixed centre and rebuild on change; vehicle clips retain dirty-region relocation.",
+    "No Windows/editor, physical GPU, driving physics, frame pacing or production replacement is verified."
+  ],
+  "source_sha256": {
+    "Engine/Render/SurfaceRasterization.h": "85ed9516ca3902dde1e69db9917fb0ae1564e49002f1f3b4856bf396ebeed484",
+    "Exhibits/DistanceClipmap/Code/InspectCaptures.py": "d3ac6bfb9f5b04ee9a8808df7f64fd045e817348b2c1199077ceca47fb922846",
+    "Exhibits/DistanceClipmap/Code/InspectShadowScope.py": "1d4f2d961d4b2a951f0046e323775c7dd67ce27cbdc5e7ed85ffcea196209092",
+    "Exhibits/DistanceClipmap/Code/InspectShadows.py": "1cdd57570089bb19f2dbeef68d7b69f565140c6a03a6a69e9d4fb9173081bbe1",
+    "Exhibits/DistanceClipmap/Code/SdfShadowValidation.cpp": "76003f3aae8df8d021b334969f8b42758b1faec954c9b330caed01560149f0f0",
+    "Exhibits/DistanceClipmap/Code/SdfShadowVulkan.cpp": "e6f245f96dba01dd10c5ce9df9157af1ab186bfb4ed860c8315dfedfbbbbe82e",
+    "Exhibits/DistanceClipmap/Code/ServeShadows.py": "e6acff83c5e4466d021e53b3d4205e0f5b7201d06ef288a848287f4096fa9125",
+    "Exhibits/DistanceClipmap/Code/ServeTransport.py": "2aaca542098c8fee6a8f0f455299da73e434b9eb2dfcad2b3f89a53aab107eb3",
+    "Exhibits/DistanceClipmap/Code/SphereVehicleValidation.cpp": "1d5bf5e55317977968e198d63219ade00ef31c2a11db591fa5b79242ca3ba7b4",
+    "Exhibits/DistanceClipmap/Code/TransportCompute.h": "55aa3896aa3f767a4fce41e0f5e86b5a0034f07180a124e805e84fd402f24e32",
+    "Exhibits/DistanceClipmap/Code/ValidateShadowPresentation.cjs": "542af6e93fd9ceca5b07614175d4de56279c1e1c31796e319cbb304934737a04",
+    "Exhibits/DistanceClipmap/Code/ValidateShadows.py": "1ba566867590a5251b270cf91e19a04647c30ba585deac75a3e025c17e300890",
+    "Exhibits/DistanceClipmap/Code/ValidateTransport.py": "da9d29b8d64c24c024bc1a22cc11be688ef47e8f401880db988b9bb1cc5a97d9",
+    "Exhibits/DistanceClipmap/Shadows.html": "bb38e1dc9ffa088c7909c64cc323e31b0ba37ab428c77d1cc7a34e2427b8abef",
+    "Exhibits/DistanceClipmap/SixRenders.md": "cb983e94233c85077f4328ca3a1472b7ba8fa615dcc330c86c0838a7181130d6",
+    "Exhibits/Renderer/Code/VulkanReadback.h": "a9680275c70294798788f82f236cec8e90e31508e0d4b3c06ec7238afce6be45",
+    "Experimental/DistanceClipmap/DistanceClipmap.h": "7a0555c834ba4bf32c2bd66cece82a80190139125db4f34c223da7d628479be0",
+    "Experimental/DistanceClipmap/FacetDistance.h": "c64963f1d9ff94adc70278f36e57858efb63dc150a272db073be5ab6fbb2ffa9",
+    "Experimental/DistanceClipmap/RadianceScene.h": "a741396159b5b6516d48f3a65631ad499671ea5b112e6091c6af76f92bf1f019",
+    "Experimental/DistanceClipmap/Shadows/CMakeLists.txt": "f297fd1a48c94d95e32bd541a4e00c56e35c9e11bb9812e3c407198ee02dc875",
+    "Experimental/DistanceClipmap/Shadows/README.md": "6ae7f7968070c43042c2693b75a5f2130af0d1a2040927806f1518392321ae83",
+    "Experimental/DistanceClipmap/Shadows/SdfShadowCapture.h": "9b36579c255e4bd6d230d4134c4ec020149bceb770395182ae9c184480f291d5",
+    "Experimental/DistanceClipmap/Shadows/SdfShadowFields.h": "916b84f937a7aeeb1f1151c58d261e38aca9512fc5490fb134e0fe9f5532c1bb",
+    "Experimental/DistanceClipmap/Shadows/SdfShadowScene.h": "dabf86a5527c37cbf50751584e3e82af0ed81122ad8cb3b69babd668d6bab395",
+    "Experimental/DistanceClipmap/Shadows/SdfShadows.slang": "855e520af4d3fb2904259fcfcfa0ce58f4affea9604fe5fc3982d92fdb0aaae7",
+    "Experimental/DistanceClipmap/Shadows/SphereVehicleScene.h": "47e013d397dcd85112dc97d7e11214e2cc51fd5e0172175d194cf1ec34e47eab",
+    "Experimental/DistanceClipmap/SobolDirections.h": "74274c63e55596dd78da69bf035e9f7058f0553d3c5b544580d52767ad0acd78",
+    "Experimental/DistanceClipmap/Transport/DiffuseProbeLattice.h": "3f89af923d5caa03a4f96099d4844a2750a84f86de4a4c1f32e162d30ab7201c",
+    "Experimental/DistanceClipmap/Transport/DirectionalRadiance.h": "65bc10ee197913149e6884d2464bd2531ef77b4b511780612ff361971ee0938d",
+    "Experimental/DistanceClipmap/Transport/TransportCapture.h": "c19dbe7c68c64d17e497dcfcc58653e7f880e9b2cf85475afeb1c5461ab55ad8",
+    "Experimental/DistanceClipmap/Transport/TransportSnapshot.h": "2dec3aef6fe5ccc0e6ff208a002b76737af4ded752c56224175ce0c98f8f1aff",
+    "Experimental/SlateReference/B/Exhibits/IlluminationHost/Archive/ControlVehicleBody.facet": "d8a7516018ba536555bca5933fabfbd1681167ad3908a87be95ad3cfd912134a",
+    "Experimental/SlateReference/B/Exhibits/IlluminationHost/Archive/ControlVehicleRim.facet": "44b50dd7d80c12f68d92b2dbdbd3d911d73334fa1ef10fbc16e07ff1812a8de5",
+    "Experimental/SlateReference/B/Exhibits/IlluminationHost/Archive/ControlVehicleTyre.facet": "1cf021cd3f7ef4cbc984bf677247e0ac6722e90f542191a4ca13391fb144387d",
+    "Frontier/Engine/Rendering/TriangleVisibilitySpace.h": "dc4b466fe1918b181ec2449d6a64318e738d04f6c0316d825c858e3cc518ebf1"
+  },
+  "executables_sha256": {
+    "SdfShadowValidation": "3a4a27e552e8b5766a7d35a59979a564112ae23bc500f2c83dd373ee27c61db2",
+    "SdfShadowVulkan": "38807fd38f7296026d7e658d30b2378c50855e7efc53f41e6f2795b8cb3a48c7",
+    "SphereVehicleValidation": "5e40da02012f95de24ee651261af8dc013fd3eeb2b9a57221693d0b9a48cc5c0"
+  }
+}

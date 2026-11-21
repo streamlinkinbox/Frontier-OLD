@@ -1,0 +1,35 @@
+{
+  "passed": true,
+  "renderer_accepted": false,
+  "assertions": 18251,
+  "azimuth_independent_max_error": 1.78813934326e-07,
+  "thin_grazing_far_segments": 256,
+  "penumbra_receiver_distances_m": [
+    0.5,
+    1.5,
+    3,
+    6
+  ],
+  "penumbra_10_90_widths_m": [
+    0.105430483818,
+    0.307391822338,
+    0.609472632408,
+    1.21624994278
+  ],
+  "sphere_cap_segments": 7980,
+  "normal_max_error": 0.000289082527161,
+  "sphere_irradiance_relative_error": 9.25370022742e-06,
+  "hybrid_segments": 7980,
+  "hybrid_visibility_differences": 0,
+  "hybrid_clip_skips": 80382,
+  "hybrid_sdf_refinements": 1815,
+  "distance_lower_excess": 0,
+  "distance_clear_rgb_difference": 0.628852009773,
+  "distance_restore_rgb_difference": 0,
+  "radiance_clear_maximum": 0,
+  "radiance_restore_difference": 0,
+  "motion_stale_rejections": 1,
+  "motion_cold_distance_difference": 0,
+  "motion_cold_radiance_difference": 0,
+  "cpu_ms_including_setup": 3540.922812
+}

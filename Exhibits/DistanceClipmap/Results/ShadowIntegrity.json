@@ -1,0 +1,87 @@
+{
+  "passed": true,
+  "new_native_shadow_paths_executed": 6,
+  "native_captures": 61,
+  "unique_float_buffers": 27,
+  "motion_float_payloads_omitted": 15,
+  "source_hashes": 35,
+  "new_ctests": 2,
+  "host_sanitizer_runs": 2,
+  "footprints": [
+    {
+      "entry": "PointSdfShadow",
+      "executed_spirv_sha256": "b649a969d387c01e5e43e3e27da66ca0c36b3600577a9a39fbe5e71b8559c4c2",
+      "ssbos": 8,
+      "push_bytes": 128,
+      "reflection_matches_executed": true
+    },
+    {
+      "entry": "AnalyticSdfPenumbra",
+      "executed_spirv_sha256": "9a85ad024e4b8f0d30fba23a8d324cefa691fb9b627b75004a2f305183b31cef",
+      "ssbos": 8,
+      "push_bytes": 128,
+      "reflection_matches_executed": true
+    },
+    {
+      "entry": "VoxelSdfPenumbra",
+      "executed_spirv_sha256": "b846b58872224634205a80de25421c97747d2ed0d1a941059409dc3f86c938e2",
+      "ssbos": 8,
+      "push_bytes": 128,
+      "reflection_matches_executed": true
+    },
+    {
+      "entry": "VoxelSdfConeGi",
+      "executed_spirv_sha256": "20ca2d7a7941a86357982bd27308a29ea81cb1c4e1ce1978537c692fc672eed5",
+      "ssbos": 8,
+      "push_bytes": 128,
+      "reflection_matches_executed": true
+    },
+    {
+      "entry": "HybridSdfSphereCap",
+      "executed_spirv_sha256": "36b454751c666b19ee1d18b50797bbc010ed7492eeadd49c9f3d76787196d91c",
+      "ssbos": 8,
+      "push_bytes": 128,
+      "reflection_matches_executed": true
+    },
+    {
+      "entry": "ReferenceSdfPaths",
+      "executed_spirv_sha256": "f1f1274e185c6df258a72fe24dbcd925888792d50fbb74f0459d88eb80c152bd",
+      "ssbos": 8,
+      "push_bytes": 128,
+      "reflection_matches_executed": true
+    },
+    {
+      "entry": "InspectSdfGeometry",
+      "executed_spirv_sha256": "94fba93d70d47f48f37eda4ac3415d47eef367e963193e7d2ef3f048244ee17a",
+      "ssbos": 8,
+      "push_bytes": 128,
+      "reflection_matches_executed": true
+    },
+    {
+      "entry": "InspectSdfPath",
+      "executed_spirv_sha256": "5fdf8ec4cd97b478ddfd6b9e28028d8b673a1ebe9f2d4b0edae8727172e98c0f",
+      "ssbos": 8,
+      "push_bytes": 128,
+      "reflection_matches_executed": true
+    },
+    {
+      "entry": "InspectSdfBounce",
+      "executed_spirv_sha256": "b92bfb67f902c146b4fb7446fe7e5cbbc3a2368b53a36fb5f0c7bf2f8f0b189b",
+      "ssbos": 8,
+      "push_bytes": 128,
+      "reflection_matches_executed": true
+    }
+  ],
+  "misaligned_primitive_control_rejected": true,
+  "builtin_azimuth_control": {
+    "rejected": true,
+    "expected_exit": 1,
+    "observed_exit": 1,
+    "modified_function": "AzimuthPair only: device builtin sin/cos instead of shared polynomial",
+    "modified_source_sha256": "2dd2c8f0edd1c80e6d9612ee3d379c2bf359838bbd3200ba6b06a32dea5ad545",
+    "log_sha256": "31062980aa7c16cb04d79303d3b0dd99659e865371f12315d7ca03c6ae8aee06",
+    "gate_relaxed": false
+  },
+  "renderer_accepted": false,
+  "scope": "Native render / evidence / bounded software Vulkan integrity, not production quality, hardware GPU or Windows/editor acceptance."
+}
